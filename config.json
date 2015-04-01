@@ -1,0 +1,7 @@
+{
+    "core":
+        {
+            // base_interval is in seconds
+            "base_interval": 15
+        }
+}
