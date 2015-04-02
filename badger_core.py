@@ -1,27 +1,30 @@
 import argparse
 import json
+import logging
 import sys
 
 sys.path.append("common")
 
 from BadgerConfig import BadgerConfig
-
-argparser = argparse.ArgumentParser()
-
-argparser.add_argument('-d', '--debug', help="Set debug level - the higher the level, the further down the rabbit hole...")
-argparser.add_argument('-f', '--config', help="Config file to load")
-
-argparser.parse_args()
-args = argparser.parse_args()
-
-if not args.config:
-    print "Could not load module 'telepathy'.\nPlease specify a configuration file via -f"
-    exit(1)
+from BadgerLogger import BadgerLogger
 
 def main():
-    config = BadgerConfig(args.config).get_config_dict()
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('-f', '--config', help="Config file to load")
+    args = argparser.parse_args()
 
-    print json.dumps(config)
+    if not args.config:
+        print "Could not load module 'telepathy'.\nPlease specify a configuration file via -f"
+        exit(1)
+
+    config = BadgerConfig(args.config).get_config_dict()
+    #logger = BadgerLogger(logLevel=config['core']['log']['level'])
+    logger = BadgerLogger(logLevel="debug")
+    log = logger.logJSON
+    print config['core']['log']['level']
+    logger.getLogLevel()
+
+    log("debug", blasphemy="sup yo?!", embeddedDict=config)
 
 if __name__ == "__main__":
     main()

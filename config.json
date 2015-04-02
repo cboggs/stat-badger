@@ -2,6 +2,9 @@
     "core":
         {
             // base_interval is in seconds
-            "base_interval": 15
+            "base_interval": 15,
+            "log": {
+                "level": "debug"
+            }
         }
 }
