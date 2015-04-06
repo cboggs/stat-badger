@@ -3,14 +3,9 @@ import os
 import re
 import sys
 
-sys.path.append("common")
-
-from BadgerLogger import BadgerLogger
-
 class BadgerConfig:
 
     def __init__(self, config_filename):
-        self.log = BadgerLogger().logJSON
 
         comment_re = re.compile(
             '(^)?[^\S\n]*/(?:\*(.*?)\*/[^\S\n]*|/[^\n]*)($)?',

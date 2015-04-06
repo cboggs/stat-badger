@@ -4,7 +4,15 @@
             // base_interval is in seconds
             "base_interval": 15,
             "log": {
+                "dest": "file",
+                "fileName": "badger.log",
                 "level": "debug"
             }
+        },
+    "modules":
+        {
+            "module_dir": "badger_modules",
+            "config_dir": "badger_modules/conf.d",
+            "modules_to_load": ["load"]
         }
 }
