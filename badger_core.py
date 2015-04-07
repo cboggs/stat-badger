@@ -1,4 +1,5 @@
 import argparse
+from datetime import datetime as dt
 import json
 import logging
 import os
@@ -89,18 +90,32 @@ def main():
     config = BadgerConfig(args.config).get_config_dict()
     logger = BadgerLogger(config['core']['log']['level'])
     log = logger.logJSON
+    payload = []
 
     log("debug", message="BadgerCore initialization complete!")
 
     modules = initialize_modules(load_modules(config['modules']['module_dir'], config['modules']['config_dir'], config['modules']['modules_to_load'], log), log)
 
     for module in modules:
+        start = dt.now()
         try:
-            module.get_metrics()
+            metrics_raw = module.get_metrics()
         except:
             ei = sys.exc_info()
-            log("err", msg="{0} ---- {1}".format(str(ei[0]), str(ei[1])))
-            del ei
+            module_name = str(module).split("<")[1].split(".")[0]
+            log("err", msg="Exception encountered calling {0}.get_metrics()".format(module_name), exceptionType="{0}".format(str(ei[0])), exception="{0}".format(str(ei[1])), module=module_name)
+            del ei, module_name
+        else:
+            elapsed_time = (dt.now() - start)
+            log("debug", msg="Elapsed time for module {0} gather: {1}".format(module, elapsed_time))
+            for measurement in metrics_raw:
+                payload.append(measurement)
+
+    try:
+        marshaled_metrics = json.dumps(payload)
+    except:
+        ei = sys.exc_info()
+        log("err", msg="Exception encountered marshalling payload to JSON", exceptionType=str(ei)[0], exception=str(ei)[1])
 
 if __name__ == "__main__":
     main()
