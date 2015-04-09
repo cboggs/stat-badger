@@ -2,7 +2,7 @@
     "core":
         {
             // base_interval is in seconds
-            "base_interval": 15,
+            "base_interval": 1,
             "log": {
                 "dest": "file",
                 "fileName": "badger.log",
@@ -11,8 +11,14 @@
         },
     "modules":
         {
-            "module_dir": "badger_modules",
-            "config_dir": "badger_modules/conf.d",
-            "modules_to_load": ["load"]
+            "dir": "badger_modules",
+            "config": "badger_modules/conf.d",
+            "included_modules": ["system"]
+        },
+    "emitters":
+        {
+            "dir": "badger_emitters",
+            "config": "badger_emitters/conf.d",
+            "included_emitters": ["stdout_pretty"]
         }
 }

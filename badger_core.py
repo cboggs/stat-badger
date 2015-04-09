@@ -5,96 +5,116 @@ import logging
 import os
 import re
 import sys
+import time
 
 sys.path.append("common")
 
 from BadgerConfig import BadgerConfig
 from BadgerLogger import BadgerLogger
 
-def load_modules(module_dir, config_dir, modules_requested, log):
-    found_modules = []
-    loaded_modules = []
+def load_modules_and_emitters(badger_config, log):
+    found = {
+        "emitters" : [],
+        "modules"  : []
+    }
+    loaded = {
+        "emitters" : [],
+        "modules"  : []
+    }
 
-    if not os.path.isdir(module_dir):
-        log("crit", msg="Could not find module_dir '{0}'".format(module_dir), exiting=True)
-        exit(1)
+    for item in ['modules', 'emitters']:
+        dir = badger_config[item]['dir']
+        config = badger_config[item]['config']
+        if not os.path.isdir(dir):
+            log("crit", msg="Could not find {0} directory '{1}'".format(item, dir), exiting=True)
+            exit(1)
 
-    if not os.path.isdir(config_dir):
-        log("crit", msg="Could not find config_dir '{0}'".format(config_dir), exiting=True)
-        exit(1)
+        if not os.path.isdir(config):
+            log("crit", msg="Could not find {0} config directory '{1}'".format(item, config), exiting=True)
+            exit(1)
 
-    sys.path.append(module_dir)
+        sys.path.append(dir)
 
-    # Check to see if the modules desired are actually present in the right place
-    for module in modules_requested:
-        if not os.path.isfile(os.path.join(module_dir, module + ".py")):
-            log("err", msg="Could not find module '{0}' in module_dir '{1}', skipping.".format(module, module_dir))
-        else:
-            log("debug", msg="Module '{0}' exists".format(module))
-            found_modules.append(module)
-
-    log("debug", msg="Found modules: {0}".format(found_modules))
-
-    # Try to dynamically import all requested (and found) modules. We loop
-    #  through these instead of using map(__import__, found_modules) in
-    #  order to avoid failing some portion of the op on account of a single
-    #  failed import. This also lets me tell you which module failed and why
-    #  in a cleaner way
-    for module in found_modules:
-       try:
-            loaded_modules.append(__import__(module, [module]))
-       except:
-            ei = sys.exc_info()
-            log("err", msg="Could not load module '{0}' at {1}".format(module, os.path.join(module_dir, module + '.py')), exceptionType="{0}".format(str(ei[0]).split("'")[1]), exception="{0}".format(ei[1]))
-            del ei
-       else: log("debug", msg="Successfully loaded module '{0}'".format(module))
-
-    # Critical exit if no modules were loaded - no sense in spinning doing nothing
-    if not len(loaded_modules):
-        log("crit", msg="No modules were loaded!", event="ErrExit")
-        exit(1)
-
-    return loaded_modules
-
-def initialize_modules(loaded_modules, log):
-    initialized_modules = []
-
-    for module in loaded_modules:
-        module_name = str(module).split("'")[1]
-        try:
-            im = getattr(module, module_name)(log)
-        except:
-            ei = sys.exc_info()
-            log("err", msg="Could not initialize module '{0}'".format(module_name), exceptionType="{0}".format(str(ei[0])), exception="{0}".format(str(ei[1])))
-        else:
-            if hasattr(im, "get_metrics"):
-                initialized_modules.append(im)
+        # Check to see if the modules and emitters desired are actually present in the right place
+        for sub_item in badger_config[item]['included_' + item]:
+            if not os.path.isfile(os.path.join(dir, sub_item + ".py")):
+                log("err", msg="Could not find {0} '{1}' in dir '{2}', skipping.".format(item, sub_item, dir))
             else:
-                log("err", msg="Required method 'get_metrics' does not exist in module '{0}'. Unloading module.".format(str(module).split("'")[1]), event="ModuleUnload")
+                log("debug", msg="{0} '{1}' exists".format(item, sub_item))
+                found[item].append(sub_item)
 
-    if not len(initialized_modules):
-        log("crit", msg="No modules could be initialized!", event="ErrExit")
-        exit(1)
+        log("info", msg="Found {0} : {1}".format(item, found[item]))
 
-    return initialized_modules
+        # Try to dynamically import all requested (and found) modules. We loop
+        #  through these instead of using map(__import__, found_modules) in
+        #  order to avoid failing some portion of the op on account of a single
+        #  failed import. This also lets me tell you which module failed and why
+        #  in a cleaner way
+        for sub_item in found[item]:
+           try:
+                loaded[item].append(__import__(sub_item, [sub_item]))
+           except:
+                ei = sys.exc_info()
+                log("err", msg="Could not load {0} '{1}' at {2}".format(item, sub_item, os.path.join(dir, sub_item + '.py')), exceptionType="{0}".format(str(ei[0]).split("'")[1]), exception="{0}".format(ei[1]))
+                del ei
+           else:
+                log("debug", msg="Module '{0}'".format(sub_item))
 
-def main():
-    argparser = argparse.ArgumentParser()
-    argparser.add_argument('-f', '--config', help="Config file to load")
-    args = argparser.parse_args()
+        # Critical exit if no modules were loaded - no sense in spinning doing nothing
+        if not len(loaded[item]):
+            log("crit", msg="No {0} were loaded!".format(item), event="ErrExit")
+            exit(1)
 
-    if not args.config:
-        print "Could not load module 'telepathy'.\nPlease specify a configuration file via -f"
-        exit(1)
+        log("info", msg="Loaded {0} : {1}".format(item, [str(si).split("'")[1] for si in loaded[item]]))
 
-    config = BadgerConfig(args.config).get_config_dict()
-    logger = BadgerLogger(config['core']['log']['level'])
-    log = logger.logJSON
-    payload = []
+    return (loaded)
 
-    log("debug", message="BadgerCore initialization complete!")
 
-    modules = initialize_modules(load_modules(config['modules']['module_dir'], config['modules']['config_dir'], config['modules']['modules_to_load'], log), log)
+def initialize_modules_and_emitters(mod_and_em, log):
+    initialized = {
+        'modules'  : [],
+        'emitters' : []
+    }
+
+    required_methods = {
+        'modules' : [ "get_metrics" ],
+        'emitters' : [ "emit_metrics" ],
+    }
+
+    for item in ['modules', 'emitters']:
+        for sub_item in mod_and_em[item]:
+            sub_item_name = str(sub_item).split("'")[1]
+            try:
+                initialized_item = getattr(sub_item, sub_item_name)(log)
+            except:
+                ei = sys.exc_info()
+                log("err", msg="Could not initialize {0} '{1}'".format(item, sub_item_name), exceptionType="{0}".format(str(ei[0])), exception="{0}".format(str(ei[1])))
+            else:
+                method_check_pass = True
+                for method in required_methods[item]:
+                    if not hasattr(initialized_item, method):
+                        log("err", msg="Required method '{0}' does not exist in {1} '{2}'. Unloading {1}.".format(method, item, str(sub_item).split("'")[1]), event="ModuleUnload")
+                        method_check_pass = False
+                        break
+
+                    if method_check_pass:
+                        initialized[item].append(initialized_item)
+                        log("debug", msg="Successfully initialized {0} '{1}'".format(item, sub_item_name))
+
+            if not len(initialized[item]):
+                log("crit", msg="No {0} could be initialized!".format(item), event="ErrExit")
+                exit(1)
+        
+            log("info", msg="Initialized {0}".format(item), initializedItems=[str(ie).split(".")[0].split("<")[1] for ie in initialized[item]])
+
+    return initialized
+
+
+def collect_metrics(modules, log):
+    payload = {
+        'timestamp' : time.time(),
+        'points'    : []
+    }
 
     for module in modules:
         start = dt.now()
@@ -109,13 +129,51 @@ def main():
             elapsed_time = (dt.now() - start)
             log("debug", msg="Elapsed time for module {0} gather: {1}".format(module, elapsed_time))
             for measurement in metrics_raw:
-                payload.append(measurement)
+                payload['points'].append(measurement)
 
-    try:
-        marshaled_metrics = json.dumps(payload)
-    except:
-        ei = sys.exc_info()
-        log("err", msg="Exception encountered marshalling payload to JSON", exceptionType=str(ei)[0], exception=str(ei)[1])
+    return payload
+
+def emit_metrics(emitters, payload, log):
+    for emitter in emitters:
+        emitter.emit_metrics(payload)
+
+def main():
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('-f', '--config', help="Config file to load")
+    args = argparser.parse_args()
+
+    if not args.config:
+        print "Could not load module 'telepathy'.\nPlease specify a configuration file via -f"
+        exit(1)
+
+    config = BadgerConfig(args.config).get_config_dict()
+    core_conf = config['core']
+    logger = BadgerLogger(config['core']['log']['level'])
+    log = logger.logJSON
+
+    log("debug", message="BadgerCore initialization complete!")
+
+    loaded_modules_and_emitters = load_modules_and_emitters(config, log)
+    initialized_modules_and_emitters = initialize_modules_and_emitters(loaded_modules_and_emitters, log)
+    modules = initialized_modules_and_emitters['modules']
+    emitters = initialized_modules_and_emitters['emitters']
+
+    while True:
+        # TODO: Each module should have the capacity for configurable
+        #  intervals per metric, and badger_core should support such
+        payload = collect_metrics(modules, log)
+
+        try:
+            json_metrics = json.dumps(payload)
+        except:
+            ei = sys.exc_info()
+            log("err", msg="Exception encountered marshalling payload to JSON", exceptionType=str(ei[0]), exception=str(ei[1]))
+        else:
+            log("debug", msg="Emitting metrics")
+
+        emit_metrics(emitters, payload, log)
+
+        time.sleep(core_conf['base_interval'])
 
 if __name__ == "__main__":
     main()
