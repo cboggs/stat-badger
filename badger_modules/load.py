@@ -1,6 +1,6 @@
 class load(object):
     def __init__(self, logger=None): #, configurator, config_dir):
-        self.prefix = "load"
+        self.prefix = "load."
         self.log = logger
         #self.configurator = configurator
         #self.config_dir = config_dir
@@ -17,11 +17,11 @@ class load(object):
         with open("/proc/loadavg") as loadavg_file:
             loadavg_data = loadavg_file.readline().split()
 
-        payload.append({ self.prefix + ".one": {'value': loadavg_data[0], 'units': ''}})
-        payload.append({ self.prefix + ".five": {'value': loadavg_data[1], 'units': ''}})
-        payload.append({ self.prefix + ".fifteen": {'value': loadavg_data[2], 'units': ''}})
-        payload.append({ self.prefix + ".runnable_entities": {'value': loadavg_data[3].split("/")[0], 'units': ''}})
-        payload.append({ self.prefix + ".total_entities": {'value': loadavg_data[3].split("/")[1], 'units': ''}})
+        payload.append({ self.prefix + "one": {'value': float(loadavg_data[0]), 'units': ''}})
+        payload.append({ self.prefix + "five": {'value': float(loadavg_data[1]), 'units': ''}})
+        payload.append({ self.prefix + "fifteen": {'value': float(loadavg_data[2]), 'units': ''}})
+        payload.append({ self.prefix + "runnable_entities": {'value': int(loadavg_data[3].split("/")[0]), 'units': ''}})
+        payload.append({ self.prefix + "total_entities": {'value': int(loadavg_data[3].split("/")[1]), 'units': ''}})
 
         return payload
 

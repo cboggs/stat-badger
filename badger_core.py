@@ -101,11 +101,11 @@ def initialize_modules_and_emitters(mod_and_em, log):
                         initialized[item].append(initialized_item)
                         log("debug", msg="Successfully initialized {0} '{1}'".format(item, sub_item_name))
 
-            if not len(initialized[item]):
-                log("crit", msg="No {0} could be initialized!".format(item), event="ErrExit")
-                exit(1)
+        if not len(initialized[item]):
+            log("crit", msg="No {0} could be initialized!".format(item), event="ErrExit")
+            exit(1)
         
-            log("info", msg="Initialized {0}".format(item), initializedItems=[str(ie).split(".")[0].split("<")[1] for ie in initialized[item]])
+        log("info", msg="Initialized {0}".format(item), initializedItems=[str(ie).split(".")[0].split("<")[1] for ie in initialized[item]])
 
     return initialized
 
