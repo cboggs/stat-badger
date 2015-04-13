@@ -31,23 +31,22 @@ class BadgerConfig:
             print "  {0}".format(e)
             exit(1)
 
-        self.config_sanity_check()
-
-    def config_sanity_check(self):
-        if not "core" in self.config_data:
-            print "missing \"core\" config section. Exiting."
-            exit(1)
-
-        for val in ["base_interval"]:
-            if not val in self.config_data['core']:
-                print "missing required \"{0}\" config value. Exiting.".format(val)
-                exit(1)
-
     def get_config_dict(self):
         return self.config_data
 
 def main():
-    config = BadgerConfig("config.json")
+    import argparse
+
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('-f', '--config', help="Config file to load")
+    args = argparser.parse_args()
+
+    if not args.config:
+         print "FAILED: Please specify a configuration file via -f"
+         exit(1)
+
+    config = BadgerConfig(args.config).get_config_dict()
+    print json.dumps(config, sort_keys=True, indent=4, separators=(',', ': '))
 
 if __name__ == "__main__":
     main()

@@ -84,6 +84,7 @@ def initialize_modules_and_emitters(mod_and_em, log):
     for item in ['modules', 'emitters']:
         for sub_item in mod_and_em[item]:
             sub_item_name = str(sub_item).split("'")[1]
+
             try:
                 initialized_item = getattr(sub_item, sub_item_name)(log)
             except:
@@ -159,9 +160,9 @@ def main():
     emitters = initialized_modules_and_emitters['emitters']
 
     while True:
-        # TODO: Each module should have the capacity for configurable
-        #  intervals per metric, and badger_core should support such
+        startCollect = dt.now()
         payload = collect_metrics(modules, log, core_conf['base_interval'])
+        endCollect = dt.now()
 
         try:
             json_metrics = json.dumps(payload)
@@ -172,6 +173,8 @@ def main():
             log("debug", msg="Emitting metrics")
 
         emit_metrics(emitters, payload, log)
+
+        log("debug", msg="Elapsed time for collection: {0}".format((endCollect - startCollect).total_seconds()))
 
         time.sleep(core_conf['base_interval'])
 
