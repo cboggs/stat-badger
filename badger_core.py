@@ -110,7 +110,7 @@ def initialize_modules_and_emitters(mod_and_em, log):
     return initialized
 
 
-def collect_metrics(modules, log):
+def collect_metrics(modules, log, interval):
     payload = {
         'timestamp' : time.time(),
         'points'    : []
@@ -119,7 +119,7 @@ def collect_metrics(modules, log):
     for module in modules:
         start = dt.now()
         try:
-            metrics_raw = module.get_metrics()
+            metrics_raw = module.get_metrics(interval)
         except:
             ei = sys.exc_info()
             module_name = str(module).split("<")[1].split(".")[0]
@@ -161,7 +161,7 @@ def main():
     while True:
         # TODO: Each module should have the capacity for configurable
         #  intervals per metric, and badger_core should support such
-        payload = collect_metrics(modules, log)
+        payload = collect_metrics(modules, log, core_conf['base_interval'])
 
         try:
             json_metrics = json.dumps(payload)

@@ -19,6 +19,6 @@
         {
             "dir": "badger_emitters",
             "config": "badger_emitters/conf.d",
-            "included_emitters": ["influxdb_emitter"]
+            "included_emitters": ["stdout_pretty"]
         }
 }

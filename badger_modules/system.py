@@ -12,7 +12,7 @@ class system(object):
             self.log.setLevel(logging.DEBUG)
             self.log.addHandler(logging.StreamHandler())
 
-    def get_metrics(self):
+    def get_metrics(self, interval=1):
         payload = []
 
         for item in self.cpu_info():

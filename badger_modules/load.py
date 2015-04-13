@@ -11,7 +11,7 @@ class load(object):
             self.log.setLevel(logging.DEBUG)
             self.log.addHandler(logging.StreamHandler())
 
-    def get_metrics(self):
+    def get_metrics(self, interval=1):
         payload = []
 
         with open("/proc/loadavg") as loadavg_file:
