@@ -19,7 +19,8 @@ def load_modules_and_emitters(badger_config, log):
     }
     loaded = {
         "emitters" : [],
-        "modules"  : []
+        "modules"  : [],
+        "configs"  : {}
     }
 
     for item in ['modules', 'emitters']:
@@ -43,6 +44,7 @@ def load_modules_and_emitters(badger_config, log):
                 log("debug", msg="{0} '{1}' exists".format(item, sub_item))
                 found[item].append(sub_item)
 
+
         log("info", msg="Found {0} : {1}".format(item, found[item]))
 
         # Try to dynamically import all requested (and found) modules. We loop
@@ -58,7 +60,17 @@ def load_modules_and_emitters(badger_config, log):
                 log("err", msg="Could not load {0} '{1}' at {2}".format(item, sub_item, os.path.join(dir, sub_item + '.py')), exceptionType="{0}".format(str(ei[0]).split("'")[1]), exception="{0}".format(ei[1]))
                 del ei
            else:
-                log("debug", msg="Module '{0}'".format(sub_item))
+                sub_item_config_file = os.path.join(config, sub_item + ".conf")
+               
+                try:
+                    sub_item_config = BadgerConfig(sub_item_config_file).get_config_dict()
+                except:
+                    loaded[item].pop()
+                    log("err", msg="Could not load config for {0} '{1}'. Removing '{1}'.".format(item, sub_item))
+                else:
+                    loaded['configs'][sub_item] = sub_item_config
+                    log("debug", msg="Loaded config for {0} '{1}'".format(item, sub_item))
+                    log("debug", msg="Successfully loaded {0} '{1}'.".format(item, sub_item))
 
         # Critical exit if no modules were loaded - no sense in spinning doing nothing
         if not len(loaded[item]):
@@ -84,9 +96,10 @@ def initialize_modules_and_emitters(mod_and_em, log):
     for item in ['modules', 'emitters']:
         for sub_item in mod_and_em[item]:
             sub_item_name = str(sub_item).split("'")[1]
+            sub_item_config = mod_and_em['configs'][sub_item_name]
 
             try:
-                initialized_item = getattr(sub_item, sub_item_name)(log)
+                initialized_item = getattr(sub_item, sub_item_name)(sub_item_config, log)
             except:
                 ei = sys.exc_info()
                 log("err", msg="Could not initialize {0} '{1}'".format(item, sub_item_name), exceptionType="{0}".format(str(ei[0])), exception="{0}".format(str(ei[1])))
