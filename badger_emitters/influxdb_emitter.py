@@ -2,22 +2,34 @@ import json
 from influxdb import client as influxdb
 
 class influxdb_emitter(object):
-    def __init__(self,logger): #, configurator, config_dir):
+    def __init__(self, config=None, logger=None):
         self.log = logger
-        #self.configurator = configurator
-        #self.config_dir = config_dir
-        self.columns = ['value', 'units', 'time']
+        self.config = config
+        self.columns = ['value', 'units', 'time', 'datacenter', 'region', 'zone', 'cluster', 'hostname', 'ipv4', 'ipv6']
+
+        if self.log == None:
+            import logging
+            self.log = logging.getLogger(__name__)
+            self.log.setLevel(logging.DEBUG)
+            self.log.addHandler(logging.StreamHandler())
 
     def emit_metrics(self, payload):
         influxdb_payload = []
         timestamp = int(payload['timestamp'])
+        datacenter = payload['datacenter']
+        region = payload['region']
+        zone = payload['zone']
+        cluster = payload['cluster']
+        hostname = payload['hostname']
+        ipv4 = payload['ipv4']
+        ipv6 = payload['ipv6']
 
         for series_data in payload['points']:
             series_name = series_data.keys()[0]
             influxdb_payload.append({
                 'name': series_name,
                 'columns': self.columns,
-                'points': [[series_data[series_name]['value'], series_data[series_name]['units'], timestamp]]
+                'points': [[series_data[series_name]['value'], series_data[series_name]['units'], timestamp, datacenter, region, zone, cluster, hostname, ipv4, ipv6]]
             })
 
         try:
