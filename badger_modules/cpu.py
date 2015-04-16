@@ -1,7 +1,7 @@
 import copy
 
 class cpu(object):
-    def __init__(self, logger=None): #, configurator, config_dir):
+    def __init__(self, config=None, logger=None): #, configurator, config_dir):
         self.prefix = 'cpu.'
         self.log = logger
         #self.configurator = configurator
