@@ -23,12 +23,12 @@
         {
             "dir": "badger_modules",
             "config": "badger_modules/conf.d",
-            "included_modules": ["diskstats"]
+            "included_modules": ["load", "cpu", "diskstats"]
         },
     "emitters":
         {
             "dir": "badger_emitters",
             "config": "badger_emitters/conf.d",
-            "included_emitters": ["stdout_pretty"]
+            "included_emitters": ["influxdb_emitter"]
         }
 }

@@ -10,7 +10,7 @@ class diskstats(object):
 
         # These store the recent run's values to let us diff and derive % utilization
         self.last_disk_vals = {}
-        self.stats = ['reads', 'read_merges', 'read_sectors', 'read_time', 'writes', 'write_merges', 'write_sectors', 'write_time', 'io', 'io_time', 'io_weighted_time']
+        self.stats = ['reads', 'reads_merged', 'read_sectors', 'read_time', 'writes', 'writes_merged', 'write_sectors', 'write_time', 'io', 'io_time', 'io_weighted_time']
 
         if self.log == None:
             import logging
@@ -55,9 +55,9 @@ class diskstats(object):
 
         # We only make it this far if self.last_util_vals has been populated
         for i, stat in enumerate(self.stats):
-            if stat != "io":
-                for disk in disk_stat.keys():
-                    disk_vals[stat + "." + disk] = int(disk_stat[disk][i])
+#            if stat != "io":
+            for disk in disk_stat.keys():
+                disk_vals[stat + "." + disk] = int(disk_stat[disk][i])
 
         for i, stat in enumerate(self.stats):
             if stat != "io":
@@ -65,6 +65,8 @@ class diskstats(object):
                     disk_vals_per_sec[stat + "." + disk] = {'value': ((int(disk_vals[stat + "." + disk]) - int(self.last_disk_vals[stat + "." + disk])) / interval), 'units': ''}
                     if stat in ['write_time', 'read_time', 'io_time', 'weighted_io_time']:
                         disk_vals_per_sec[stat + "." + disk]['units'] = 'ms'
+            else:
+                 disk_vals_per_sec[stat + "." + disk] = {'value': disk_vals[stat + "." + disk], 'units': ''}
 
         self.last_disk_vals = copy.deepcopy(disk_vals)
 
