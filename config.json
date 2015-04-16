@@ -1,8 +1,18 @@
 {
     "core":
         {
-            // base_interval is in seconds
+            /* base_interval is in seconds */
             "base_interval": 1,
+            /* keep these values present with empty strings if they are not
+               applicable - deliverable payload expects them to be present,
+               even if not populated */
+            "datacenter": "",
+            "region": "",
+            "zone": "",
+            "cluster": "foobar",
+            "hostname": "baz",
+            "ipv4": "192.168.2.15",
+            "ipv6": "",
             "log": {
                 "dest": "file",
                 "fileName": "badger.log",
@@ -13,7 +23,7 @@
         {
             "dir": "badger_modules",
             "config": "badger_modules/conf.d",
-            "included_modules": ["load"]
+            "included_modules": ["diskstats"]
         },
     "emitters":
         {

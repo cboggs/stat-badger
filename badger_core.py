@@ -1,4 +1,5 @@
 import argparse
+import copy
 from datetime import datetime as dt
 import json
 import logging
@@ -43,7 +44,6 @@ def load_modules_and_emitters(badger_config, log):
             else:
                 log("debug", msg="{0} '{1}' exists".format(item, sub_item))
                 found[item].append(sub_item)
-
 
         log("info", msg="Found {0} : {1}".format(item, found[item]))
 
@@ -123,12 +123,13 @@ def initialize_modules_and_emitters(mod_and_em, log):
 
     return initialized
 
+def collect_metrics(modules, log, interval, sysinfo):
+    # make sure we don't end up adding to the sysinfo dict and passing around
+    #  a full payload on every run
+    payload = copy.deepcopy(sysinfo)
 
-def collect_metrics(modules, log, interval):
-    payload = {
-        'timestamp' : time.time(),
-        'points'    : []
-    }
+    payload['timestamp'] = time.time()
+    payload['points'] = []
 
     for module in modules:
         start = dt.now()
@@ -162,6 +163,15 @@ def main():
 
     config = BadgerConfig(args.config).get_config_dict()
     core_conf = config['core']
+    sysinfo = {
+        "datacenter": core_conf['datacenter'],
+        "region": core_conf['region'],
+        "zone": core_conf['zone'],
+        "cluster": core_conf['cluster'],
+        "hostname": core_conf['hostname'],
+        "ipv4": core_conf['ipv4'],
+        "ipv6": core_conf['ipv6']
+    }
     logger = BadgerLogger(config['core']['log']['level'])
     log = logger.logJSON
 
@@ -174,7 +184,7 @@ def main():
 
     while True:
         startCollect = dt.now()
-        payload = collect_metrics(modules, log, core_conf['base_interval'])
+        payload = collect_metrics(modules, log, core_conf['base_interval'], sysinfo)
         endCollect = dt.now()
 
         try:
