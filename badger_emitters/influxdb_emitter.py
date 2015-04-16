@@ -42,7 +42,7 @@ class influxdb_emitter(object):
 
         try:
             db.write_points(json.dumps(influxdb_payload), time_precision='s')
-            print json.dumps(influxdb_payload)
+            #print json.dumps(influxdb_payload)
         except:
             import sys
             ei = sys.exc_info()
