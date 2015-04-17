@@ -1,10 +1,9 @@
 import re
 
 class system(object):
-    def __init__(self, logger=None): #, configurator, config_dir):
+    def __init__(self, config=None, logger=None): #, configurator, config_dir):
         self.log = logger
-        #self.configurator = configurator
-        #self.config_dir = config_dir
+        self.config = config
 
         if self.log == None:
             import logging
