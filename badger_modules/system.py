@@ -17,7 +17,6 @@ class system(object):
         for item in self.cpu_info():
             payload.append(item)
 
-        payload.append({'mem.total': self.mem_total()})
         payload.append({'disk.count': self.disk_count()})
 
         return payload
@@ -37,12 +36,6 @@ class system(object):
             { 'cpu.speed': {'value': cpu_speed, 'units': 'MHz'}},
             { 'cpu.cache_size': {'value': cpu_cache_size, 'units': 'KB'}}
         ]
-
-    def mem_total(self):
-        with open("/proc/meminfo") as meminfo:
-            mem_total = meminfo.readline().split()[1]
-
-        return {'value': int(mem_total), 'units': 'KB'}
 
     def disk_count(self):
         disk_count = 0
