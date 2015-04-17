@@ -23,7 +23,7 @@
         {
             "dir": "badger_modules",
             "config": "badger_modules/conf.d",
-            "included_modules": ["load", "cpu", "diskstats"]
+            "included_modules": ["system", "load", "cpu", "diskstats"]
         },
     "emitters":
         {

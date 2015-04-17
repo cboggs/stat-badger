@@ -7,6 +7,8 @@ class diskstats(object):
     def __init__(self, config=None, logger=None):
         self.prefix = 'disk.'
         self.log = logger
+        self.config = config
+        self.disks_to_check = self.config['disks_to_check']
 
         # These store the recent run's values to let us diff and derive % utilization
         self.last_disk_vals = {}
@@ -24,8 +26,6 @@ class diskstats(object):
         for stat in self.disk_stats(interval):
             payload.append(stat)
 
-#        payload.append(self.ctxt_switches(proc_stat, interval))
-
         return payload
 
 
@@ -35,8 +35,10 @@ class diskstats(object):
         with open("/proc/diskstats") as fd:
             for line in fd.readlines():
                 # Just grab nbd, sda, and hda devices for now
-                if len(line) and re.match('^[0-9 ]+(nbd[0-9a-z]+|(h|s)da) ', line):
-                    split_line = line.rstrip("\n").split()
+                #if len(line) and re.match('^[0-9 ]+(nbd[0-9a-z]+|(h|s)da) ', line):
+                #if len(line) and re.match('^[0-9 ]+sda ', line):
+                split_line = line.rstrip("\n").split()
+                if not self.disks_to_check or split_line[2] in self.disks_to_check:
                     disk_stat[split_line[2]] = split_line[3:]
 
         disk_vals = {}
@@ -53,20 +55,23 @@ class diskstats(object):
 
             return [{self.prefix + key: {'value': 0.0, 'units': ''}} for key in self.last_disk_vals]
 
-        # We only make it this far if self.last_util_vals has been populated
+        # We only make it this far if self.last_disk_vals has been populated
         for i, stat in enumerate(self.stats):
-#            if stat != "io":
             for disk in disk_stat.keys():
                 disk_vals[stat + "." + disk] = int(disk_stat[disk][i])
 
         for i, stat in enumerate(self.stats):
-            if stat != "io":
-                for disk in disk_stat.keys():
+            for disk in disk_stat.keys():
+                if stat == "io":
+                    disk_vals_per_sec[stat + "." + disk] = {'value': disk_vals[stat + "." + disk], 'units': ''}
+                else:
                     disk_vals_per_sec[stat + "." + disk] = {'value': ((int(disk_vals[stat + "." + disk]) - int(self.last_disk_vals[stat + "." + disk])) / interval), 'units': ''}
                     if stat in ['write_time', 'read_time', 'io_time', 'weighted_io_time']:
                         disk_vals_per_sec[stat + "." + disk]['units'] = 'ms'
-            else:
-                 disk_vals_per_sec[stat + "." + disk] = {'value': disk_vals[stat + "." + disk], 'units': ''}
+
+                    # just because it's always gratifying to see actual throughput...
+                    elif stat in ['read_sectors', 'write_sectors']:
+                        disk_vals_per_sec[stat.split("_")[0] + "_thruput." + disk] = {'value': (int(disk_vals_per_sec[stat + "." + disk]['value']) * 512), 'units': 'B'}
 
         self.last_disk_vals = copy.deepcopy(disk_vals)
 
