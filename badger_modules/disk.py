@@ -3,7 +3,7 @@ import re
 import time
 import json
 
-class diskstats(object):
+class disk(object):
     def __init__(self, config=None, logger=None):
         self.prefix = 'disk.'
         self.log = logger
@@ -80,5 +80,5 @@ class diskstats(object):
 
 
 if __name__ == "__main__":
-    d = diskstats()
+    d = disk()
     print d.get_metrics()

@@ -1,7 +1,7 @@
 import copy
 import re
 
-class netstats(object):
+class network(object):
     def __init__(self, config=None, logger=None):
         self.prefix = 'net.'
         self.log = logger
@@ -48,7 +48,7 @@ class netstats(object):
         net_vals_per_sec = {}
 
         # First run of this module will hit this block and return all zeroes, after populating
-        #  self.last_disk_vals. This approach avoids inflated values for should-be-zero states
+        #  self.last_net_vals. This approach avoids inflated values for should-be-zero states
         #  at first collection
         if not self.last_net_vals:
             for i, stat in enumerate(self.stats):
@@ -57,7 +57,7 @@ class netstats(object):
 
             return [{self.prefix + key: {'value': 0.0, 'units': ''}} for key in self.last_net_vals]
 
-        # We only make it this far if self.last_disk_vals has been populated
+        # We only make it this far if self.last_net_vals has been populated
         for i, stat in enumerate(self.stats):
             for iface in net_stat.keys():
                 net_vals[stat + "." + iface] = int(net_stat[iface][i])
@@ -77,5 +77,5 @@ class netstats(object):
 
 
 if __name__ == "__main__":
-    n = netstats()
+    n = network()
     print n.get_metrics()
