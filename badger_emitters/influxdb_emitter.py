@@ -6,12 +6,25 @@ class influxdb_emitter(object):
         self.log = logger
         self.config = config
         self.columns = ['value', 'units', 'time', 'datacenter', 'region', 'zone', 'cluster', 'hostname', 'ipv4', 'ipv6']
+        self.host = self.config['host']
+        self.port = self.config['port']
+        self.database = self.config['database']
+        self.user = self.config['user']
+        self.password = self.config['pass']
 
         if self.log == None:
             import logging
             self.log = logging.getLogger(__name__)
             self.log.setLevel(logging.DEBUG)
             self.log.addHandler(logging.StreamHandler())
+
+        try:
+            self.db = influxdb.InfluxDBClient(self.host, self.port, self.user, self.password, self.database)
+        except:
+            import sys
+            ei = sys.exc_info()
+            self.log("err", msg="Could not connect to InfluxDB!", emitter=__name__, exceptionType="{0}".format(str(ei[0])), exception="{0}".format(str(ei[1])))
+            raise RuntimeError("Failed to connect to InfluxDB")
 
     def emit_metrics(self, payload):
         influxdb_payload = []
@@ -33,15 +46,7 @@ class influxdb_emitter(object):
             })
 
         try:
-            db = influxdb.InfluxDBClient('10.2.10.20', '8086', 'root', 'root', 'codytest')
-        except:
-            import sys
-            ei = sys.exc_info()
-            self.log("err", msg="Could not connect to InfluxDB!", emitter=__name__, exceptionType="{0}".format(str(ei[0])), exception="{0}".format(str(ei[1])))
-            return
-
-        try:
-            db.write_points(json.dumps(influxdb_payload), time_precision='s')
+            self.db.write_points(json.dumps(influxdb_payload), time_precision='s')
             #print json.dumps(influxdb_payload)
         except:
             import sys
