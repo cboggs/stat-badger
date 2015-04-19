@@ -49,7 +49,7 @@ class graphite_emitter(object):
             stat_tuples.append( (path + series_name, (timestamp, series_data[series_name]['value'])) )
 
         try:
-            payload = pickle.dumps(stat_tuples, protocol=2)
+            graphite_payload = pickle.dumps(stat_tuples, protocol=2)
         except:
             import sys, traceback
             ei = sys.exc_info()
@@ -57,14 +57,14 @@ class graphite_emitter(object):
             return
 
         try:
-            header = struct.pack("!L", len(payload))
+            header = struct.pack("!L", len(graphite_payload))
         except:
             import sys, traceback
             ei = sys.exc_info()
             traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)
             return
         else:
-            message = header + payload
+            message = header + graphite_payload
 
         try:
             sock = socket.socket()
