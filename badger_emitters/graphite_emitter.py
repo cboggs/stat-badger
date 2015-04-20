@@ -22,6 +22,7 @@ class graphite_emitter(object):
 #            raise RuntimeError("Failed to connect to InfluxDB")
 
     def emit_metrics(self, payload):
+        print "**************************"
         stat_tuples = []
         timestamp = int(payload['timestamp'])
         datacenter = payload['datacenter']

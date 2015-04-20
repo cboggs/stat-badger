@@ -1,15 +1,19 @@
 from multiprocessing import Pool
 import time
 from random import randint
+import concurrent.futures
 
-def f((x, y)):
+def f(x, y):
     time.sleep(x) 
-    print "{0} + {1}".format(x, y)
+    return "{0} + {1}".format(x, y)
+
+def cb(stuff):
+    print stuff.result()
 
 if __name__ == '__main__':
-    i = 0
-    pool = Pool(processes=3)              # start 4 worker processes
-#    pool.map(f, ((randint(1,10), randint(15,20)) for i in range(10)))
-    tasks = [((randint(1,30), randint(15,20))) for i in range(20)]
-#    print tasks
-    pool.map(f, ((randint(1,30), randint(15,20)) for i in range(20)))
+    with concurrent.futures.ProcessPoolExecutor(max_workers=5) as executor:
+        for i in range(10):
+            e = executor.submit(f, randint(5,15), randint(16,20))
+            e.add_done_callback(cb)
+            i += 1
+    print "running!"

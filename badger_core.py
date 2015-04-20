@@ -1,18 +1,29 @@
 import argparse
+import concurrent.futures
 import copy
+import copy_reg
 from datetime import datetime as dt
 import json
 import logging
-from multiprocessing import Pool
 import os
 import re
 import sys
+import threading
 import time
+import types
 
 sys.path.append("common")
 
 from BadgerConfig import BadgerConfig
 from BadgerLogger import BadgerLogger
+
+def _pickle_method(m):
+    if m.im_self is None:
+        return getattr, (m.im_class, m.im_func.func_name)
+    else:
+        return getattr, (m.im_self, m.im_func.func_name)
+
+copy_reg.pickle(types.MethodType, _pickle_method)
 
 class Badger(object):
     def __init__(self):
@@ -39,8 +50,6 @@ class Badger(object):
         self.log = self.logger.logJSON
 
         self.log("debug", message="BadgerCore initialization complete!")
-
-        self.emitter_pool = Pool(processes=self.config['emitters']['workers'])
 
         self.loaded_modules_and_emitters = self.load_modules_and_emitters()
         self.initialized_modules_and_emitters = self.initialize_modules_and_emitters()
@@ -183,21 +192,15 @@ class Badger(object):
         return payload
 
 
-    def __call__(self, (emitter, payload)):
-        self.run_emitter((emitter, payload))
-
-    def run_emitter(self, (emitter, payload)):
-        print "****************************{0}".format(payload)
-        startEmit = dt.now()
-        #emitter.emit_metrics(payload)
-        endEmit = dt.now()
-        self.log("debug", msg="Elapsed time for emission from emitter {0}: {1}".format(str(emitter).split(".")[1].split()[0], (endEmit - startEmit).total_seconds()))
-
-
     def emit_metrics(self, payload):
-        self.emitter_pool.map(self, ((emitter, payload) for emitter in self.emitters))
-#        for emitter in self.emitters:
-#            self.run_emitter((emitter, payload))
+        #with concurrent.futures.ProcessPoolExecutor(max_workers=self.config['emitters']['workers']) as executor:
+        #    for emitter in self.emitters:
+        #        executor.submit(emitter.emit_metrics, payload)
+        for emitter in self.emitters:
+            t = threading.Thread(target=emitter.emit_metrics, args=(payload,))
+            t.daemon = True
+            t.start()
+
 
     def dig(self):
         while True:
