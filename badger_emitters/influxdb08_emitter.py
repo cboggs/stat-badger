@@ -1,7 +1,7 @@
 import json
-from influxdb import client as influxdb
+import urllib2
 
-class influxdb_emitter(object):
+class influxdb08_emitter(object):
     def __init__(self, config=None, logger=None):
         self.log = logger
         self.config = config
@@ -18,13 +18,8 @@ class influxdb_emitter(object):
             self.log.setLevel(logging.DEBUG)
             self.log.addHandler(logging.StreamHandler())
 
-        try:
-            self.db = influxdb.InfluxDBClient(self.host, self.port, self.user, self.password, self.database)
-        except:
-            import sys
-            ei = sys.exc_info()
-            self.log("err", msg="Could not connect to InfluxDB!", emitter=__name__, exceptionType="{0}".format(str(ei[0])), exception="{0}".format(str(ei[1])))
-            raise RuntimeError("Failed to connect to InfluxDB")
+        self.url = "http://{0}:{1}/db/{2}/series?u={3}&p={4}&time_precision=s".format(self.host, self.port, self.database, self.user, self.password)
+        self.log("debug", msg=self.url)
 
     def emit_metrics(self, payload):
         influxdb_payload = []
@@ -45,12 +40,11 @@ class influxdb_emitter(object):
                 'points': [[series_data[series_name]['value'], series_data[series_name]['units'], timestamp, datacenter, region, zone, cluster, hostname, ipv4, ipv6]]
             })
 
+        req = urllib2.Request(self.url, json.dumps(influxdb_payload), {'Content-Type': 'application/json'})
+
         try:
-            self.db.write_points(json.dumps(influxdb_payload), time_precision='s')
-            #print json.dumps(influxdb_payload)
-        except:
-            import sys
-            ei = sys.exc_info()
-            self.log("err", msg="Could not write points to InfluxDB!", emitter=__name__, exceptionType="{0}".format(str(ei[0])), exception="{0}".format(str(ei[1])))
-            print json.dumps(influxdb_payload)
-            return
+            urllib2.urlopen(req)
+        except urllib2.HTTPError as e:
+            self.log("err", msg="InfluxDB ingest request failed. Response: {0}".format(e), error="EmitFailed")
+        else:
+            self.log("debug", msg="Successfully sent batch to InfluxDB")

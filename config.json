@@ -23,13 +23,13 @@
         {
             "dir": "badger_modules",
             "config": "badger_modules/conf.d",
-            "included_modules": ["load", "system", "cpu", "disk", "network"]
+            "included_modules": ["load", "system", "cpu", "disk", "network", "memory"]
         },
     "emitters":
         {
             "dir": "badger_emitters",
             "config": "badger_emitters/conf.d",
             "workers": 3,
-            "included_emitters": ["influxdb_emitter"]
+            "included_emitters": ["influxdb08_emitter", "graphite_emitter"]
         }
 }

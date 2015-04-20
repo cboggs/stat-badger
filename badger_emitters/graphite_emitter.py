@@ -15,14 +15,8 @@ class graphite_emitter(object):
             self.log.setLevel(logging.DEBUG)
             self.log.addHandler(logging.StreamHandler())
 
-#        except:
-#            import sys
-#            ei = sys.exc_info()
-#            self.log("err", msg="Could not connect to InfluxDB!", emitter=__name__, exceptionType="{0}".format(str(ei[0])), exception="{0}".format(str(ei[1])))
-#            raise RuntimeError("Failed to connect to InfluxDB")
 
     def emit_metrics(self, payload):
-        print "**************************"
         stat_tuples = []
         timestamp = int(payload['timestamp'])
         datacenter = payload['datacenter']
@@ -52,17 +46,17 @@ class graphite_emitter(object):
         try:
             graphite_payload = pickle.dumps(stat_tuples, protocol=2)
         except:
-            import sys, traceback
+            import sys
             ei = sys.exc_info()
-            traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)
+            self.log("err", msg="Failed to pickle Graphite stats", exceptionType="{0}".format(str(ei[0]).split("'")[1]), exception="{0}".format(ei[1]), error="EmitFailed")
             return
 
         try:
             header = struct.pack("!L", len(graphite_payload))
         except:
-            import sys, traceback
+            import sys
             ei = sys.exc_info()
-            traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)
+            self.log("err", msg="Failed to pack Graphite message", exceptionType="{0}".format(str(ei[0]).split("'")[1]), exception="{0}".format(ei[1]), error="EmitFailed")
             return
         else:
             message = header + graphite_payload
@@ -73,9 +67,9 @@ class graphite_emitter(object):
             sock.sendall(message)
             sock.close()
         except:
-            import sys, traceback
+            import sys
             ei = sys.exc_info()
-            traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)
+            self.log("err", msg="Failed to send batch to Graphite", exceptionType="{0}".format(str(ei[0]).split("'")[1]), exception="{0}".format(ei[1]), error="EmitFailed")
             return
         else:
-            self.log("debug", msg="Successfully sent Graphite batch!")
+            self.log("debug", msg="Successfully sent batch to Graphite")
