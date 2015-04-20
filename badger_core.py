@@ -1,5 +1,4 @@
 import argparse
-import concurrent.futures
 import copy
 import copy_reg
 from datetime import datetime as dt
@@ -10,20 +9,11 @@ import re
 import sys
 import threading
 import time
-import types
 
 sys.path.append("common")
 
 from BadgerConfig import BadgerConfig
 from BadgerLogger import BadgerLogger
-
-def _pickle_method(m):
-    if m.im_self is None:
-        return getattr, (m.im_class, m.im_func.func_name)
-    else:
-        return getattr, (m.im_self, m.im_func.func_name)
-
-copy_reg.pickle(types.MethodType, _pickle_method)
 
 class Badger(object):
     def __init__(self):
@@ -193,17 +183,16 @@ class Badger(object):
 
 
     def emit_metrics(self, payload):
-        #with concurrent.futures.ProcessPoolExecutor(max_workers=self.config['emitters']['workers']) as executor:
-        #    for emitter in self.emitters:
-        #        executor.submit(emitter.emit_metrics, payload)
+        # emission is async from the main loop, so that we can more reliably retain
+        #  a one-second base polling interval
         for emitter in self.emitters:
             t = threading.Thread(target=emitter.emit_metrics, args=(payload,))
-            t.daemon = True
             t.start()
 
 
     def dig(self):
         while True:
+            self.log("debug", msg="Active threads: {0}".format(threading.activeCount()))
             startCollect = dt.now()
             payload = self.collect_metrics()
             endCollect = dt.now()
