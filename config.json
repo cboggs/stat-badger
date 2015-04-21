@@ -1,14 +1,12 @@
 {
     "core":
         {
-            /* base_interval is in seconds - decimal values accepted */
-            "interval": 1,
             /* keep these values present with empty strings if they are not
                applicable - deliverable payload expects them to be present,
                even if not populated */
-            "datacenter": "",
-            "region": "",
-            "zone": "",
+            "datacenter": "ec2",
+            "region": "us-west-1",
+            "zone": "us-west-1a",
             "cluster": "foobar",
             "hostname": "baz",
             "ipv4": "192.168.2.15",
@@ -23,13 +21,13 @@
         {
             "dir": "badger_modules",
             "config": "badger_modules/conf.d",
-            "included_modules": ["load", "system", "cpu", "disk", "network", "memory"]
+//            "included_modules": ["load", "system", "cpu", "disk", "network", "memory"]
+            "included_modules": ["load"]
         },
     "emitters":
         {
             "dir": "badger_emitters",
             "config": "badger_emitters/conf.d",
-            "workers": 3,
-            "included_emitters": ["influxdb08_emitter", "graphite_emitter"]
+            "included_emitters": ["stdout_pretty"]
         }
 }
