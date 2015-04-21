@@ -210,13 +210,7 @@ class Badger(object):
             payload = self.collect_stats()
             endCollect = dt.now()
 
-            try:
-                json_stats = json.dumps(payload)
-            except:
-                ei = sys.exc_info()
-                self.log("err", msg="Exception encountered marshalling payload to JSON", exceptionType=str(ei[0]), exception=str(ei[1]))
-            else:
-                self.log("debug", msg="Emitting stats")
+            self.log("debug", msg="Emitting stats")
 
             startEmit = dt.now()
             self.emit_stats(payload)
