@@ -25,3 +25,5 @@ Beyond that, you're free to do whatever you need to gather the stats. The config
 Badger Core is designed to allow you to implement custom intervals in your modules, if you'd like. You can see an example of how to do so in any of the stock modules, such as [load.py](https://github.com/cboggs/stat-badger/blob/master/badger_modules/load.py).
 
 You are also free to implement stat blacklisting in your modules, though there is no expectation that a blacklist will exist. It's worth noting, however, that blacklisting a stat at the module level is effectively a **GLOBAL** blacklisting of that stat. If you want to keep a particular stat from reaching a particular back-end, you should blacklist it in the appropriate emitter configuration.
+
+Please also note that blacklist and custom interval handling is left entirely up to you - there is no core handling of those concepts.

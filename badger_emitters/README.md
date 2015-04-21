@@ -19,3 +19,5 @@ Beyond that, you're free to do whatever you need to emit the stats. The config y
 Badger Core is designed to allow you to implement custom intervals in your emitters, if you'd like. You can see an example of how to do so in any of the stock modules, such as [stdout_pretty.py](https://github.com/cboggs/stat-badger/blob/master/badger_emitters/stdout_pretty.py).
 
 You are also free to implement stat blacklisting in your emitters, though there is no expectation that a blacklist will exist. It's worth noting, however, that blacklisting a stat at the module level is **not** a global blacklisting of that stat - it will simply be omitted from that particular emitter's output. If you need to globally blacklist a stat, you should do so in the appropriate module configuration.
+
+Please also note that blacklist and custom interval handling is left entirely up to you - there is no core handling of those concepts.
