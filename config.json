@@ -21,8 +21,7 @@
         {
             "dir": "badger_modules",
             "config": "badger_modules/conf.d",
-//            "included_modules": ["load", "system", "cpu", "disk", "network", "memory"]
-            "included_modules": ["load"]
+            "included_modules": ["load", "system", "cpu", "disk", "network", "memory"]
         },
     "emitters":
         {

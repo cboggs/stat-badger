@@ -4,18 +4,27 @@ Stat Badger is a tool to commodify system stats. It makes zero assumptions about
 ## The Basics
 Badger is intended to be run on every (Linux) host you could possibly want to gather stats from. It consists of the Badger Core, Modules, and Emitters. It collects metrics from all modules and emits (asynchronously) from all emitters on a 1 second interval. You can configure custom intervals on both a per-module and per-emitter basis. You can also blacklist stats at the module and emitter level. (More detail on custom intervals and blacklists in the module and emitter README files).
 
-The stock file and directory structure is as follows (though module and emitter dirs are configurable):
-- stat-badger-0.2.0
-    - badger_core.py
-    - common (classes that badger_core, modules, and emitters rely on)
-    - badger_modules
-        - cpu.py
-        - conf.d
-            - cpu.conf
-    - badger_emitters
-        - influxdb08_emitter.py
-        - conf.d
-            - influxdb08_emitter.conf
+Out of the box, Badger can collect detailed system stats. You're provided the following:
+Modules:  cpu, load, disk, network, memory, system (for mostly-static values like disk and core counts)
+Emitters: stdout, stdout_pretty, influxdb08, graphite, kafka (soon)
+
+The stock file and directory structure is similar to the following (module and emitter dirs are configurable):
+```
+├── badger_core.py
+├── config.json
+├── badger_emitters
+│   ├── conf.d
+│   │   ├── influxdb08_emitter.conf
+│   │   └── stdout_pretty.conf
+│   ├── influxdb08_emitter.py
+│   └── stdout_pretty.py
+└── badger_modules
+    ├── conf.d
+    │   ├── cpu.conf
+    │   └── network.conf
+    ├── network.py
+    └── cpu.py
+```
 
 
 ## Configuration
