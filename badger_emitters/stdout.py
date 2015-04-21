@@ -3,6 +3,11 @@ class stdout(object):
         self.log = logger
         self.config = config
 
+        if not self.config['interval']:
+            self.interval = 1
+        else:
+            self.interval = self.config['interval']
+
         if self.log == None:
             import logging
             self.log = logging.getLogger(__name__)
@@ -10,4 +15,8 @@ class stdout(object):
             self.log.addHandler(logging.StreamHandler())
 
     def emit_stats(self, payload):
+        # take into account custom interval, if present in config
+        if global_iteration % self.interval:
+            return
+
         print payload

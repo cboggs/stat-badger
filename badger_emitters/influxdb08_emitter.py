@@ -5,6 +5,12 @@ class influxdb08_emitter(object):
     def __init__(self, config=None, logger=None):
         self.log = logger
         self.config = config
+
+        if not self.config['interval']:
+            self.interval = 1
+        else:
+            self.interval = self.config['interval']
+
         self.columns = ['value', 'units', 'time', 'datacenter', 'region', 'zone', 'cluster', 'hostname', 'ipv4', 'ipv6']
         self.host = self.config['host']
         self.port = self.config['port']
@@ -21,7 +27,11 @@ class influxdb08_emitter(object):
         self.url = "http://{0}:{1}/db/{2}/series?u={3}&p={4}&time_precision=s".format(self.host, self.port, self.database, self.user, self.password)
         self.log("debug", msg=self.url)
 
-    def emit_stats(self, payload):
+    def emit_stats(self, payload, global_iteration):
+        # take into account custom interval, if present in config
+        if global_iteration % self.interval:
+            return
+
         influxdb_payload = []
         timestamp = int(payload['timestamp'])
         datacenter = payload['datacenter']

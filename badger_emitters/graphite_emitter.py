@@ -6,6 +6,12 @@ class graphite_emitter(object):
     def __init__(self, config=None, logger=None):
         self.log = logger
         self.config = config
+
+        if not self.config['interval']:
+            self.interval = 1
+        else:
+            self.interval = self.config['interval']
+
         self.carbon_host = self.config['host']
         self.carbon_port = self.config['port']
 
@@ -16,7 +22,11 @@ class graphite_emitter(object):
             self.log.addHandler(logging.StreamHandler())
 
 
-    def emit_stats(self, payload):
+    def emit_stats(self, payload, global_iteration):
+        # take into account custom interval, if present in config
+        if global_iteration % self.interval:
+            return
+
         stat_tuples = []
         timestamp = int(payload['timestamp'])
         datacenter = payload['datacenter']

@@ -25,6 +25,10 @@ class cpu(object):
             self.log.addHandler(logging.StreamHandler())
 
     def get_stats(self, global_iteration):
+        # take into account custom interval, if present in config
+        if global_iteration % self.interval:
+            return None
+
         payload = []
         proc_stat = {}
 

@@ -199,7 +199,7 @@ class Badger(object):
         # emission is async from the main loop, so that we can more reliably retain
         #  a one-second base polling interval
         for emitter in self.emitters:
-            t = threading.Thread(target=emitter.emit_stats, args=(payload,))
+            t = threading.Thread(target=emitter.emit_stats, args=(payload,self.global_iteration))
             t.start()
 
 
