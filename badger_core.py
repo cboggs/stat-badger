@@ -41,6 +41,10 @@ class Badger(object):
 
         self.log("debug", message="BadgerCore initialization complete!")
 
+        # this is passed to get_stats() in all modules to enable
+        #  per-module and per-emitter collection & emission intervals
+        self.global_iteration = 0
+
         self.loaded_modules_and_emitters = self.load_modules_and_emitters()
         self.initialized_modules_and_emitters = self.initialize_modules_and_emitters()
         self.modules = self.initialized_modules_and_emitters['modules']
@@ -122,8 +126,8 @@ class Badger(object):
         }
 
         required_methods = {
-            'modules' : [ "get_metrics" ],
-            'emitters' : [ "emit_metrics" ],
+            'modules' : [ "get_stats" ],
+            'emitters' : [ "emit_stats" ],
         }
 
         for item in ['modules', 'emitters']:
@@ -156,7 +160,7 @@ class Badger(object):
 
         return initialized
 
-    def collect_metrics(self):
+    def collect_stats(self):
         # make sure we don't end up adding to the sysinfo dict and passing around
         #  a full payload on every run
         payload = copy.deepcopy(self.sysinfo)
@@ -167,26 +171,35 @@ class Badger(object):
         for module in self.modules:
             start = dt.now()
             try:
-                metrics_raw = module.get_metrics(self.core_conf['interval'])
+                stats_raw = module.get_stats(self.global_iteration)
             except:
                 ei = sys.exc_info()
                 module_name = str(module).split("<")[1].split(".")[0]
-                self.log("err", msg="Exception encountered calling {0}.get_metrics()".format(module_name), exceptionType="{0}".format(str(ei[0])), exception="{0}".format(str(ei[1])), module=module_name)
+                self.log("err", msg="Exception encountered calling {0}.get_stats()".format(module_name), exceptionType="{0}".format(str(ei[0])), exception="{0}".format(str(ei[1])), module=module_name)
                 del ei, module_name
             else:
-                elapsed_time = (dt.now() - start)
-                self.log("debug", msg="Elapsed time for module {0} gather: {1}".format(module, elapsed_time))
-                for measurement in metrics_raw:
-                    payload['points'].append(measurement)
+                if stats_raw:
+                    elapsed_time = (dt.now() - start)
+                    self.log("debug", msg="Elapsed time for module {0} gather: {1}".format(module, elapsed_time))
+                    for measurement in stats_raw:
+                        payload['points'].append(measurement)
+
+        if not payload['points']:
+            self.log("debug", msg="No stats gathered for global_iteration {0}".format(self.global_iteration))
+            return None
 
         return payload
 
 
-    def emit_metrics(self, payload):
+    def emit_stats(self, payload):
+        if not payload:
+            self.log("debug", msg="No stats to emit for global_iteration {0}".format(self.global_iteration))
+            return
+
         # emission is async from the main loop, so that we can more reliably retain
         #  a one-second base polling interval
         for emitter in self.emitters:
-            t = threading.Thread(target=emitter.emit_metrics, args=(payload,))
+            t = threading.Thread(target=emitter.emit_stats, args=(payload,))
             t.start()
 
 
@@ -194,25 +207,32 @@ class Badger(object):
         while True:
             self.log("debug", msg="Active threads: {0}".format(threading.activeCount()))
             startCollect = dt.now()
-            payload = self.collect_metrics()
+            payload = self.collect_stats()
             endCollect = dt.now()
 
             try:
-                json_metrics = json.dumps(payload)
+                json_stats = json.dumps(payload)
             except:
                 ei = sys.exc_info()
                 self.log("err", msg="Exception encountered marshalling payload to JSON", exceptionType=str(ei[0]), exception=str(ei[1]))
             else:
-                self.log("debug", msg="Emitting metrics")
+                self.log("debug", msg="Emitting stats")
 
             startEmit = dt.now()
-            self.emit_metrics(payload)
+            self.emit_stats(payload)
             endEmit = dt.now()
 
             self.log("debug", msg="Elapsed time for collection: {0}".format((endCollect - startCollect).total_seconds()))
             self.log("debug", msg="Elapsed time for emission: {0}".format((endEmit - startEmit).total_seconds()))
 
-            time.sleep(self.core_conf['interval'])
+            # need to be sure we roll over this counter appropriately, otherwise we're
+            #  guaranteed a crash every 292471208677.53-ish years. that would suck.
+            if self.global_iteration == sys.maxint:
+                self.global_iteration = 0
+            else:
+                self.global_iteration += 1
+
+            time.sleep(1)
 
 if __name__ == "__main__":
     badger = Badger()

@@ -7,11 +7,13 @@ class network(object):
         self.log = logger
         self.config = config
 
-        if self.config:
-            self.interfaces_to_check = self.config['interfaces_to_check']
+        if not self.config['interval']:
+            self.interval = 1
         else:
-            self.interfaces_to_check = []
+            self.interval = self.config['interval']
 
+        self.interfaces_to_check = self.config['interfaces_to_check']
+        
         # These store the recent run's values to let us diff and derive % utilization
         self.last_net_vals = {}
         self.stats = ['rx_bytes', 'rx_packets', 'rx_errs', 'rx_drop', 'rx_fifo', 'rx_frame', 'rx_compressed', 'rx_multicast', 'tx_bytes', 'tx_packets', 'tx_errs', 'tx_drop', 'tx_fifo', 'tx_colls', 'tx_carier', 'tx_compressed']
@@ -22,16 +24,16 @@ class network(object):
             self.log.setLevel(logging.DEBUG)
             self.log.addHandler(logging.StreamHandler())
 
-    def get_metrics(self, interval=1):
+    def get_stats(self, global_iteration):
         payload = []
 
-        for stat in self.net_stats(interval):
+        for stat in self.net_stats():
             payload.append(stat)
 
         return payload
 
 
-    def net_stats(self, interval):
+    def net_stats(self):
         net_stat = {}
 
         with open("/proc/net/dev") as fd:
@@ -64,7 +66,7 @@ class network(object):
 
         for i, stat in enumerate(self.stats):
             for iface in net_stat.keys():
-                net_vals_per_sec[stat + "." + iface] = {'value': ((int(net_vals[stat + "." + iface]) - int(self.last_net_vals[stat + "." + iface])) / interval), 'units': ''}
+                net_vals_per_sec[stat + "." + iface] = {'value': ((int(net_vals[stat + "." + iface]) - int(self.last_net_vals[stat + "." + iface])) / self.interval), 'units': ''}
                 if stat in ['rx_bytes', 'tx_bytes']:
                     net_vals_per_sec[stat + "." + iface]['units'] = 'B'
 
@@ -78,4 +80,4 @@ class network(object):
 
 if __name__ == "__main__":
     n = network()
-    print n.get_metrics()
+    print n.get_stats()

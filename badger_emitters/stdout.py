@@ -9,5 +9,5 @@ class stdout(object):
             self.log.setLevel(logging.DEBUG)
             self.log.addHandler(logging.StreamHandler())
 
-    def emit_metrics(self, payload):
+    def emit_stats(self, payload):
         print payload

@@ -4,13 +4,21 @@ class load(object):
         self.log = logger
         self.config = config
 
+        if not self.config['interval']:
+            self.interval = 1
+        else:
+            self.interval = self.config['interval']
+
         if self.log == None:
             import logging
             self.log = logging.getLogger(__name__)
             self.log.setLevel(logging.DEBUG)
             self.log.addHandler(logging.StreamHandler())
 
-    def get_metrics(self, interval=1):
+    def get_stats(self, global_iteration):
+        if global_iteration % self.interval:
+            return []
+
         payload = []
 
         with open("/proc/loadavg") as loadavg_file:
@@ -26,4 +34,4 @@ class load(object):
 
 if __name__ == "__main__":
     l = load()
-    print l.get_metrics()
+    print l.get_stats()

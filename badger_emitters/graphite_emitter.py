@@ -16,7 +16,7 @@ class graphite_emitter(object):
             self.log.addHandler(logging.StreamHandler())
 
 
-    def emit_metrics(self, payload):
+    def emit_stats(self, payload):
         stat_tuples = []
         timestamp = int(payload['timestamp'])
         datacenter = payload['datacenter']

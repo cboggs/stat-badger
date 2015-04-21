@@ -5,13 +5,18 @@ class system(object):
         self.log = logger
         self.config = config
 
+        if not self.config['interval']:
+            self.interval = 1
+        else:
+            self.interval = self.config['interval']
+
         if self.log == None:
             import logging
             self.log = logging.getLogger(__name__)
             self.log.setLevel(logging.DEBUG)
             self.log.addHandler(logging.StreamHandler())
 
-    def get_metrics(self, interval=1):
+    def get_stats(self, global_iteration):
         payload = []
 
         for item in self.cpu_info():
@@ -50,4 +55,4 @@ class system(object):
 
 if __name__ == "__main__":
     s = system()
-    print s.get_metrics()
+    print s.get_stats()

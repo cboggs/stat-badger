@@ -21,7 +21,7 @@ class influxdb08_emitter(object):
         self.url = "http://{0}:{1}/db/{2}/series?u={3}&p={4}&time_precision=s".format(self.host, self.port, self.database, self.user, self.password)
         self.log("debug", msg=self.url)
 
-    def emit_metrics(self, payload):
+    def emit_stats(self, payload):
         influxdb_payload = []
         timestamp = int(payload['timestamp'])
         datacenter = payload['datacenter']

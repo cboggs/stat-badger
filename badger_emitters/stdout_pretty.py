@@ -11,10 +11,10 @@ class stdout_pretty(object):
             self.log.setLevel(logging.DEBUG)
             self.log.addHandler(logging.StreamHandler())
 
-    def emit_metrics(self, payload):
+    def emit_stats(self, payload):
         try:
             print json.dumps(payload, sort_keys=True, indent=4, separators=(',', ': '))
         except:
             import sys
             ei = sys.exc_info()
-            self.log("err", msg="Could not emit metrics!", emitter=__name__, exceptionType="{0}".format(str(ei[0])), exception="{0}".format(str(ei[1])))
+            self.log("err", msg="Could not emit stats!", emitter=__name__, exceptionType="{0}".format(str(ei[0])), exception="{0}".format(str(ei[1])))

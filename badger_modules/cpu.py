@@ -4,8 +4,12 @@ class cpu(object):
     def __init__(self, config=None, logger=None): #, configurator, config_dir):
         self.prefix = 'cpu.'
         self.log = logger
-        #self.configurator = configurator
-        #self.config_dir = config_dir
+        self.config = config
+        
+        if not self.config['interval']:
+            self.interval = 1
+        else:
+            self.interval = self.config['interval']
 
         # These store the recent run's values to let us diff and derive % utilization
         self.last_util_vals = {}
@@ -20,7 +24,7 @@ class cpu(object):
             self.log.setLevel(logging.DEBUG)
             self.log.addHandler(logging.StreamHandler())
 
-    def get_metrics(self, interval=1):
+    def get_stats(self, global_iteration):
         payload = []
         proc_stat = {}
 
@@ -37,8 +41,8 @@ class cpu(object):
         for stat in self.util_percent(proc_stat):
             payload.append(stat)
 
-        payload.append(self.ctxt_switches(proc_stat, interval))
-        payload.append(self.procs_forked(proc_stat, interval))
+        payload.append(self.ctxt_switches(proc_stat))
+        payload.append(self.procs_forked(proc_stat))
         payload.append({self.prefix + 'procs_running': {'value': int(proc_stat['procs_running'][0]), 'units': ''}})
         payload.append({self.prefix + 'procs_blocked': {'value': int(proc_stat['procs_blocked'][0]), 'units': ''}})
 
@@ -87,27 +91,27 @@ class cpu(object):
         return [{self.prefix + key: value} for key,value in util.iteritems()]
 
 
-    def ctxt_switches(self, proc_stat, interval=1):
+    def ctxt_switches(self, proc_stat):
         #Assume first run, return zero but populate last value
         if not self.last_ctxt_switches:
             self.last_ctxt_switches = int(proc_stat['ctxt'][0])
             return {self.prefix + 'ctxt_per_sec': {'value': 0, 'units': ''}}
 
         ctxt_switches = int(proc_stat['ctxt'][0])
-        ctxt_switches_per_second = (float(ctxt_switches) - float(self.last_ctxt_switches)) / float(interval)
+        ctxt_switches_per_second = (float(ctxt_switches) - float(self.last_ctxt_switches)) / float(self.interval)
         self.last_ctxt_switches = ctxt_switches
 
         return {self.prefix + 'ctxt_per_sec': {'value': ctxt_switches_per_second, 'units': ''}}
 
 
-    def procs_forked(self, proc_stat, interval=1):
+    def procs_forked(self, proc_stat):
         #Assume first run, return zero but populate last value
         if not self.last_procs_forked:
             self.last_procs_forked = int(proc_stat['processes'][0])
             return {self.prefix + 'procs_forked_per_sec': {'value': 0, 'units': ''}}
 
         procs_forked = int(proc_stat['processes'][0])
-        procs_forked_per_second = (float(procs_forked) - float(self.last_procs_forked)) / float(interval)
+        procs_forked_per_second = (float(procs_forked) - float(self.last_procs_forked)) / float(self.interval)
         self.last_procs_forked = procs_forked
 
         return {self.prefix + 'procs_forked_per_sec': {'value': procs_forked_per_second, 'units': ''}}
@@ -116,4 +120,4 @@ class cpu(object):
 
 if __name__ == "__main__":
     c = cpu()
-    print c.get_metrics()
+    print c.get_stats()

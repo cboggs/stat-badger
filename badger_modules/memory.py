@@ -4,13 +4,18 @@ class memory(object):
         self.log = logger
         self.config = config
 
+        if not self.config['interval']:
+            self.interval = 1
+        else:
+            self.interval = self.config['interval']
+
         if self.log == None:
             import logging
             self.log = logging.getLogger(__name__)
             self.log.setLevel(logging.DEBUG)
             self.log.addHandler(logging.StreamHandler())
 
-    def get_metrics(self, interval=1):
+    def get_stats(self, global_iteration):
         payload = []
 
         for item in self.mem_stats():
@@ -34,4 +39,4 @@ class memory(object):
 
 if __name__ == "__main__":
     m = memory()
-    print m.get_metrics()
+    print m.get_stats()

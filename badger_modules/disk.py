@@ -8,6 +8,12 @@ class disk(object):
         self.prefix = 'disk.'
         self.log = logger
         self.config = config
+
+        if not self.config['interval']:
+            self.interval = 1
+        else:
+            self.interval = self.config['interval']
+
         self.disks_to_check = self.config['disks_to_check']
 
         # These store the recent run's values to let us diff and derive % utilization
@@ -20,16 +26,16 @@ class disk(object):
             self.log.setLevel(logging.DEBUG)
             self.log.addHandler(logging.StreamHandler())
 
-    def get_metrics(self, interval=1):
+    def get_stats(self, global_iteration):
         payload = []
 
-        for stat in self.disk_stats(interval):
+        for stat in self.disk_stats():
             payload.append(stat)
 
         return payload
 
 
-    def disk_stats(self, interval):
+    def disk_stats(self):
         disk_stat = {}
 
         with open("/proc/diskstats") as fd:
@@ -65,7 +71,7 @@ class disk(object):
                 if stat == "io":
                     disk_vals_per_sec[stat + "." + disk] = {'value': disk_vals[stat + "." + disk], 'units': ''}
                 else:
-                    disk_vals_per_sec[stat + "." + disk] = {'value': ((int(disk_vals[stat + "." + disk]) - int(self.last_disk_vals[stat + "." + disk])) / interval), 'units': ''}
+                    disk_vals_per_sec[stat + "." + disk] = {'value': ((int(disk_vals[stat + "." + disk]) - int(self.last_disk_vals[stat + "." + disk])) / self.interval), 'units': ''}
                     if stat in ['write_time', 'read_time', 'io_time', 'weighted_io_time']:
                         disk_vals_per_sec[stat + "." + disk]['units'] = 'ms'
 
@@ -81,4 +87,4 @@ class disk(object):
 
 if __name__ == "__main__":
     d = disk()
-    print d.get_metrics()
+    print d.get_stats()
