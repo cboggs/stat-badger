@@ -1,5 +1,6 @@
 import logging
 import json
+from datetime import datetime as dt
 
 # This class needs some love, because it can only be instantiated in one
 # module if you don't want configs overwritten and erratic. For now I don't
@@ -38,6 +39,7 @@ class BadgerLogger(object):
 
         logLevel = logLevel.lower()
         kwargs['logLevel'] = logLevel
+        kwargs['timestamp'] = dt.isoformat(dt.now())
 
         try:
             if logLevel == "debug":
