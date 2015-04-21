@@ -27,6 +27,7 @@ class Badger(object):
 
         self.config = BadgerConfig(args.config).get_config_dict()
         self.core_conf = self.config['core']
+        self.log_conf = self.config['core']['log']
         self.sysinfo = {
             "datacenter": self.core_conf['datacenter'],
             "region": self.core_conf['region'],
@@ -36,7 +37,7 @@ class Badger(object):
             "ipv4": self.core_conf['ipv4'],
             "ipv6": self.core_conf['ipv6']
         }
-        self.logger = BadgerLogger(self.core_conf['log']['level'])
+        self.logger = BadgerLogger(self.log_conf['level'], self.log_conf['dest'], self.log_conf['fileName'])
         self.log = self.logger.logJSON
 
         self.log("debug", message="BadgerCore initialization complete!")
