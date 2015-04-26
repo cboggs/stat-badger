@@ -14,7 +14,7 @@ class stdout(object):
             self.log.setLevel(logging.DEBUG)
             self.log.addHandler(logging.StreamHandler())
 
-    def emit_stats(self, payload):
+    def emit_stats(self, payload, global_iteration):
         # take into account custom interval, if present in config
         if global_iteration % self.interval:
             return
