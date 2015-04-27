@@ -18,8 +18,6 @@ class influxdb08_emitter(object):
         self.user = self.config['user']
         self.password = self.config['pass']
 
-        self.prefix = self.config['prefix']
-
         if self.log == None:
             import logging
             self.log = logging.getLogger(__name__)
@@ -47,7 +45,7 @@ class influxdb08_emitter(object):
         for series_data in payload['points']:
             series_name = series_data.keys()[0]
             influxdb_payload.append({
-                'name': self.prefix +  series_name,
+                'name': series_name,
                 'columns': self.columns,
                 'points': [[series_data[series_name]['value'], series_data[series_name]['units'], timestamp, datacenter, region, zone, cluster, hostname, ipv4, ipv6]]
             })
