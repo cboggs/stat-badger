@@ -54,5 +54,5 @@ class system(object):
             
 
 if __name__ == "__main__":
-    s = system({"interval":0})
+    s = system(config={"interval":0})
     print s.get_stats(0)
