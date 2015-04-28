@@ -5,8 +5,9 @@ Stat Badger is a tool to commodify system stats. It makes zero assumptions about
 Badger is intended to be run on every (Linux) host you could possibly want to gather stats from. It consists of the Badger Core, Modules, and Emitters. It collects metrics from all modules and emits (asynchronously) from all emitters on a 1 second interval. You can configure custom intervals on both a per-module and per-emitter basis. You can also blacklist stats at the module and emitter level. (More detail on custom intervals and blacklists in the module and emitter README files).
 
 Out of the box, Badger can collect detailed system stats. You're provided the following:
-Modules:  cpu, load, disk, network, memory, system (for mostly-static values like disk and core counts)
-Emitters: stdout, stdout_pretty, influxdb08, graphite, kafka (soon)
+* Modules: cpu, load, disk, network, memory, system (for mostly-static values like disk and core counts)
+
+* Emitters: stdout, stdout_pretty, influxdb08, graphite, kafka (soon)
 
 The stock file and directory structure is similar to the following (module and emitter dirs are configurable):
 ```
