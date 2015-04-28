@@ -12,7 +12,7 @@ class network(object):
         else:
             self.interval = self.config['interval']
 
-        self.interfaces_to_check = self.config['interfaces_to_check']
+        self.interfaces_to_check = self.config['interfaces_to_check'].split(",")
         
         # These store the recent run's values to let us diff and derive % utilization
         self.last_net_vals = {}
@@ -83,5 +83,5 @@ class network(object):
 
 
 if __name__ == "__main__":
-    n = network()
-    print n.get_stats()
+    n = network({"interval":0, "interfaces_to_check":"eth0,em1"})
+    print n.get_stats(0)

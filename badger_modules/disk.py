@@ -14,7 +14,7 @@ class disk(object):
         else:
             self.interval = self.config['interval']
 
-        self.disks_to_check = self.config['disks_to_check']
+        self.disks_to_check = self.config['disks_to_check'].split(',')
 
         # These store the recent run's values to let us diff and derive % utilization
         self.last_disk_vals = {}
@@ -89,5 +89,5 @@ class disk(object):
 
 
 if __name__ == "__main__":
-    d = disk()
-    print d.get_stats()
+    d = disk(config={"interval":1, "disks_to_check":"sda,nbd8,nbd9"})
+    print d.get_stats(0)
