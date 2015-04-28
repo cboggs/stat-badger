@@ -34,5 +34,5 @@ class load(object):
         return payload
 
 if __name__ == "__main__":
-    l = load()
-    print l.get_stats()
+    l = load({"interval":0})
+    print l.get_stats(0)
