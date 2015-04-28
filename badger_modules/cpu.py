@@ -17,6 +17,7 @@ class cpu(object):
         self.last_procs_forked= 0
         self.last_total_jiffies = 0
         self.states = ['user', 'nice', 'system', 'idle', 'iowait', 'irq', 'softirq', 'steal', 'guest', 'guest_nice']
+        self.cpu_cores = int(open("/proc/cpuinfo").read().count("processor\t: "))
 
         if self.log == None:
             import logging
@@ -45,10 +46,11 @@ class cpu(object):
         for stat in self.util_percent(proc_stat):
             payload.append(stat)
 
-        payload.append(self.ctxt_switches(proc_stat))
         payload.append(self.procs_forked(proc_stat))
         payload.append({self.prefix + 'procs_running': {'value': int(proc_stat['procs_running'][0]), 'units': ''}})
         payload.append({self.prefix + 'procs_blocked': {'value': int(proc_stat['procs_blocked'][0]), 'units': ''}})
+        for stat in self.ctxt_switches(proc_stat):
+            payload.append(stat)
 
 
         return payload
@@ -103,9 +105,13 @@ class cpu(object):
 
         ctxt_switches = int(proc_stat['ctxt'][0])
         ctxt_switches_per_second = (float(ctxt_switches) - float(self.last_ctxt_switches)) / float(self.interval)
+        ctxt_switches_per_second_per_core = int(ctxt_switches_per_second) / int(self.cpu_cores)
         self.last_ctxt_switches = ctxt_switches
 
-        return {self.prefix + 'ctxt_per_sec': {'value': ctxt_switches_per_second, 'units': ''}}
+        return [
+                {self.prefix + 'ctxt_per_sec': {'value': ctxt_switches_per_second, 'units': ''}},
+                {self.prefix + 'ctxt_per_sec_per_core': {'value': ctxt_switches_per_second_per_core, 'units': ''}}
+        ]
 
 
     def procs_forked(self, proc_stat):
@@ -123,5 +129,10 @@ class cpu(object):
 
 
 if __name__ == "__main__":
-    c = cpu()
-    print c.get_stats()
+    import time
+    c = cpu(config={"interval":0})
+    i = 0
+    while i < 2:
+        print c.get_stats(0)
+        i += 1
+        time.sleep(1)
