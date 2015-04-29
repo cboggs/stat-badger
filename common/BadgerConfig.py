@@ -13,8 +13,7 @@ class BadgerConfig:
         )
 
         if not os.path.isfile(config_filename):
-            print "Could not find configuration file {0}. Exiting.".format(config_filename)
-            exit(1)
+            raise Exception("Could not find configuration file {0}. Exiting.".format(config_filename))
 
         try:
             with open(config_filename) as f:
@@ -27,9 +26,7 @@ class BadgerConfig:
                 f.close()
 
         except ValueError as e:
-            print "Failed to load config, invalid JSON:"
-            print "  {0}".format(e)
-            exit(1)
+            raise Exception("Could not load configuration file {0}. Exiting.".format(config_filename))
 
     def get_config_dict(self):
         return self.config_data

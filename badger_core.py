@@ -25,7 +25,14 @@ class Badger(object):
             print "Could not load module 'telepathy'.\nPlease specify a configuration file via -f"
             exit(1)
 
-        self.config = BadgerConfig(args.config).get_config_dict()
+        try:
+            self.config = BadgerConfig(args.config).get_config_dict()
+        except:
+            import traceback
+            ei = sys.exc_info()
+            traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)
+            print "Could not load config! Exiting!"
+            
         self.core_conf = self.config['core']
         self.log_conf = self.config['core']['log']
         self.sysinfo = {
@@ -230,5 +237,9 @@ class Badger(object):
             time.sleep(1)
 
 if __name__ == "__main__":
-    badger = Badger()
+    try:
+        badger = Badger()
+    except:
+        exit(1)
+
     badger.dig()
