@@ -177,7 +177,7 @@ class process_stats(object):
             if self.last_cpu_vals[proc] and vals[proc]:
                 # proc appears to still be present, find utilization
                 diffs[proc] = vals[proc] - self.last_cpu_vals[proc]
-                util[proc] =  { 'value': (float(diffs[proc]) / float(new_jiffies) * 100), 'units': 'percent' }
+                util[proc] =  { 'value': (float(diffs[proc]) / float(new_jiffies)) * 100, 'units': 'percent' }
             else:
                 # proc is not running under this pid anymore, report zero
                 # this does mean that if the proc respawned under a new pid,
