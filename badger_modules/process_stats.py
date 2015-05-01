@@ -145,6 +145,11 @@ class process_stats(object):
                 rates['voluntary_ctxt_per_sec.' + proc] = diffs['voluntary_ctxt_per_sec.' + proc] / self.interval
                 rates['nonvoluntary_ctxt_per_sec.' + proc] = diffs['nonvoluntary_ctxt_per_sec.' + proc] / self.interval
             else:
+                # Have to re-populate vals dict lest we copy an empty dict into
+                # self.last_ctxt_vals which causes KeyErrors when encoutering transient
+                # or restarted procs
+                vals['voluntary_ctxt_per_sec.' + proc] = 0
+                vals['nonvoluntary_ctxt_per_sec.' + proc] = 0
                 rates['voluntary_ctxt_per_sec.' + proc] = 0
                 rates['nonvoluntary_ctxt_per_sec.' + proc] = 0
 
