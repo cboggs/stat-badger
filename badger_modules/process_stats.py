@@ -1,11 +1,14 @@
 import copy
-from datetime import datetime as dt
 import os
 import re
 
 ###
 # Please note that this module is kind of experimental.
-# You should ensure that the patterns specified in 
+# You should ensure that the patterns specified in your config are as specific
+#  as you can make them. Making them too greedy will probably not give you the
+#  results you expect, as the module will find the first match in /proc and 
+#  return results for it - which may or may not be the actual process you're
+#  trying to monitor.
 
 class process_stats(object):
     def __init__(self, config=None, logger=None):
@@ -48,7 +51,7 @@ class process_stats(object):
 
         payload = []
 
-        # It's unnecessary to map pids every iteration. Shoot for every 10 seconds instead
+        # It's unnecessary to map pids every iteration. Shoot for every 5 seconds instead
         if not global_iteration % 5:
             self.find_pids()
 
