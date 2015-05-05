@@ -1,4 +1,7 @@
 # Stat Badger - Commodify Your Stats
+
+**badger** (verb): to harass or urge persistently; pester; nag
+
 Stat Badger is a tool to commodify system stats. It makes zero assumptions about what stats you want to gather, and zero assumptions about where you want to send those stats.
 
 ## The Basics
