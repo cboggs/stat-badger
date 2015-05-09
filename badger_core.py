@@ -240,6 +240,10 @@ if __name__ == "__main__":
     try:
         badger = Badger()
     except:
+        import traceback
+        ei = sys.exc_info()
+        traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)
+        print "Could not Badger Core! Exiting."
         exit(1)
 
     badger.dig()
