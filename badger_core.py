@@ -53,10 +53,56 @@ class Badger(object):
         #  per-module and per-emitter collection & emission intervals
         self.global_iteration = 0
 
-        self.loaded_modules_and_emitters = self.load_modules_and_emitters()
-        self.initialized_modules_and_emitters = self.initialize_modules_and_emitters()
-        self.modules = self.initialized_modules_and_emitters['modules']
-        self.emitters = self.initialized_modules_and_emitters['emitters']
+
+        for item_type in ['modules', 'async_modules', 'emitters']:
+            dir = self.config[item_type]['dir']
+            if os.path.isdir(dir):
+                sys.path.append(dir)
+            else:
+                self.log("err", msg="Can't find {0} dir at {1}. Exiting.".format(item_type, dir))
+
+        self.loaded_modules = [self.load_item(item, "modules") for item in self.config['modules']['included_modules']]
+        self.loaded_async_modules = [self.load_item(item, "async_modules") for item in self.config['async_modules']['included_modules']]
+        self.loaded_emitters = [self.load_item(item, "emitters") for item in self.config['emitters']['included_emitters']]
+
+#        self.loaded_modules_and_emitters = self.load_modules_and_emitters()
+#        self.initialized_modules_and_emitters = self.initialize_modules_and_emitters()
+#        self.modules = self.initialized_modules_and_emitters['modules']
+#        self.emitters = self.initialized_modules_and_emitters['emitters']
+
+    def load_item(self, item, item_type):
+        base_item_config = os.path.join(self.config[item_type])
+        item_dir = base_item_config['dir']
+        config_dir = base_item_config['config']
+
+        if not os.path.isfile(os.path.join(item_dir, item + ".py")):
+            self.log("err", msg="Could not find {0} '{1}' in dir '{2}', skipping.".format(item, sub_item, item_dir))
+            return None
+
+        if not os.path.isfile(os.path.join(config_dir, item + ".conf")):
+            self.log("err", msg="Could not find {0} '{1}' in dir '{2}', skipping.".format(item, sub_item, item_dir))
+            return None
+            
+
+        try:
+            loaded_item = __import__(item, [item])
+        except:
+            ei = sys.exc_info()
+            self.log("error", msg="Could not load {0} '{1}' at {2}".format(item_type, item, os.path.join(item_dir, item + '.py')), exceptionType="{0}".format(str(ei[0]).split("'")[1]), exception="{0}".format(ei[1]))
+            del ei
+            return None
+
+        try:
+            sub_item_config = BadgerConfig(os.path.join(config_dir, item + ".conf")).get_config_dict()
+        except:
+            self.log("err", msg="Could not load config for {0} '{1}'. Removing '{1}'.".format(item_type, item))
+            return None
+
+        self.log("debug", msg="Loaded config for {0} '{1}'".format(item_type, item))
+        self.log("debug", msg="Successfully loaded {0} '{1}'.".format(item_type, item))
+
+        return str(loaded_item)
+            
 
     def load_modules_and_emitters(self):
         found = {
@@ -212,29 +258,32 @@ class Badger(object):
 
 
     def dig(self):
-        while True:
-            self.log("debug", msg="Active threads: {0}".format(threading.activeCount()))
-            startCollect = dt.now()
-            payload = self.collect_stats()
-            endCollect = dt.now()
-
-            self.log("debug", msg="Emitting stats")
-
-            startEmit = dt.now()
-            self.emit_stats(payload)
-            endEmit = dt.now()
-
-            self.log("debug", msg="Elapsed time for collection: {0}".format((endCollect - startCollect).total_seconds()))
-            self.log("debug", msg="Elapsed time for emission: {0}".format((endEmit - startEmit).total_seconds()))
-
-            # need to be sure we roll over this counter appropriately, otherwise we're
-            #  guaranteed a crash every 292471208677.53-ish years. that would suck.
-            if self.global_iteration == sys.maxint:
-                self.global_iteration = 0
-            else:
-                self.global_iteration += 1
-
-            time.sleep(1)
+        self.log("debug", msg=self.loaded_modules)
+        self.log("debug", msg=self.loaded_async_modules)
+        self.log("debug", msg=self.loaded_emitters)
+#        while True:
+#            self.log("debug", msg="Active threads: {0}".format(threading.activeCount()))
+#            startCollect = dt.now()
+#            payload = self.collect_stats()
+#            endCollect = dt.now()
+#
+#            self.log("debug", msg="Emitting stats")
+#
+#            startEmit = dt.now()
+#            self.emit_stats(payload)
+#            endEmit = dt.now()
+#
+#            self.log("debug", msg="Elapsed time for collection: {0}".format((endCollect - startCollect).total_seconds()))
+#            self.log("debug", msg="Elapsed time for emission: {0}".format((endEmit - startEmit).total_seconds()))
+#
+#            # need to be sure we roll over this counter appropriately, otherwise we're
+#            #  guaranteed a crash every 292471208677.53-ish years. that would suck.
+#            if self.global_iteration == sys.maxint:
+#                self.global_iteration = 0
+#            else:
+#                self.global_iteration += 1
+#
+#            time.sleep(1)
 
 if __name__ == "__main__":
     try:
