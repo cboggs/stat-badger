@@ -17,6 +17,9 @@ class system(object):
             self.log.addHandler(logging.StreamHandler())
 
     def get_stats(self, global_iteration):
+        if global_iteration % self.interval:
+            return None
+
         payload = []
 
         for item in self.cpu_info():
