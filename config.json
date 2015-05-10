@@ -12,7 +12,7 @@
             "ipv4": "192.168.2.15",
             "ipv6": "",
             "log": {
-                "dest": "",
+                "dest": "stdout",
                 "fileName": "badger.log",
                 "level": "debug"
             }
@@ -21,7 +21,13 @@
         {
             "dir": "badger_modules",
             "config": "badger_modules/conf.d",
-            "included_modules": ["load", "system", "cpu", "disk", "network", "memory", "process_stats"]
+            "included_modules": ["system", "cpu", "disk", "network", "memory", "process_stats"]
+        },
+    "async_modules":
+        {
+            "dir": "badger_modules",
+            "config": "badger_modules/conf.d",
+            "included_modules": ["load"]
         },
     "emitters":
         {
