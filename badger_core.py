@@ -5,6 +5,7 @@ from datetime import datetime as dt
 import json
 import logging
 import os
+from Queue import Queue
 import re
 import sys
 import threading
@@ -32,6 +33,7 @@ class Badger(object):
             ei = sys.exc_info()
             traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)
             print "Could not load config! Exiting!"
+            exit(1)
             
         self.core_conf = self.config['core']
         self.log_conf = self.config['core']['log']
@@ -49,10 +51,10 @@ class Badger(object):
 
         self.log("debug", message="BadgerCore initialization complete!")
 
-        # this is passed to get_stats() in all modules to enable
-        #  per-module and per-emitter collection & emission intervals
+        # this is passed to get_stats() in all modules (async and serial)
+        #  and to emit_stats() in all emitters to enable per-module and
+        #  per-emitter collection & emission intervals
         self.global_iteration = 0
-
 
         for item_type in ['modules', 'async_modules', 'emitters']:
             dir = self.config[item_type]['dir']
@@ -60,27 +62,60 @@ class Badger(object):
                 sys.path.append(dir)
             else:
                 self.log("err", msg="Can't find {0} dir at {1}. Exiting.".format(item_type, dir))
+                exit(1)
 
-        self.loaded_modules = [self.load_item(item, "modules") for item in self.config['modules']['included_modules']]
-        self.loaded_async_modules = [self.load_item(item, "async_modules") for item in self.config['async_modules']['included_modules']]
-        self.loaded_emitters = [self.load_item(item, "emitters") for item in self.config['emitters']['included_emitters']]
+        self.modules = [self.load_item(item, "modules") for item in self.config['modules']['included_modules']]
 
-#        self.loaded_modules_and_emitters = self.load_modules_and_emitters()
-#        self.initialized_modules_and_emitters = self.initialize_modules_and_emitters()
-#        self.modules = self.initialized_modules_and_emitters['modules']
-#        self.emitters = self.initialized_modules_and_emitters['emitters']
+        self.async_modules = [self.load_item(item, "async_modules") for item in self.config['async_modules']['included_modules']]
+
+        if (not self.modules or not self.modules[0]) and (not self.async_modules or not self.async_modules[0]):
+            self.log("err", msg="No modules loaded! Exiting.")
+            exit(1)
+
+        self.emitters = [self.load_item(item, "emitters") for item in self.config['emitters']['included_emitters']]
+
+        if not self.emitters[0]:
+            self.log("err", msg="No emitters loaded! Exiting.")
+            exit(1)
+
+        # this queue will hold stats gathered by async modules. this
+        #  allows async modules to take as long as they please while
+        #  gathering stats, and the main loop will slurp them out of
+        #  the queue in the next global iteration
+        self.async_stats_queue = Queue(100000)
+
+        # set a limit for items to retrieve from the async stats queue on each
+        #  collection so as to (hopefully) avoid blocking the queue for too
+        #  long in the event that things back up a bit
+        self.queue_batch_size = 1000
+
+        # set up one worker thread for each async_module included in
+        #  the config
+        self.async_workers = []
+
+        for async_module in self.async_modules:
+            worker = threading.Thread(target = self.collect_async_stats, args = (async_module,))
+            worker.setDaemon(True)
+            self.async_workers.append(worker)
+        
 
     def load_item(self, item, item_type):
+        required_methods = {
+            'modules' : [ "get_stats" ],
+            'async_modules' : [ "get_stats" ],
+            'emitters' : [ "emit_stats" ]
+        }
+
         base_item_config = os.path.join(self.config[item_type])
         item_dir = base_item_config['dir']
         config_dir = base_item_config['config']
 
         if not os.path.isfile(os.path.join(item_dir, item + ".py")):
-            self.log("err", msg="Could not find {0} '{1}' in dir '{2}', skipping.".format(item, sub_item, item_dir))
+            self.log("err", msg="Could not find {0} '{1}' in dir '{2}', skipping.".format(item_type, item, item_dir))
             return None
 
         if not os.path.isfile(os.path.join(config_dir, item + ".conf")):
-            self.log("err", msg="Could not find {0} '{1}' in dir '{2}', skipping.".format(item, sub_item, item_dir))
+            self.log("err", msg="Could not find config for {0} '{1}' in dir '{2}', skipping.".format(item_type, item, item_dir))
             return None
             
 
@@ -93,7 +128,7 @@ class Badger(object):
             return None
 
         try:
-            sub_item_config = BadgerConfig(os.path.join(config_dir, item + ".conf")).get_config_dict()
+            item_config = BadgerConfig(os.path.join(config_dir, item + ".conf")).get_config_dict()
         except:
             self.log("err", msg="Could not load config for {0} '{1}'. Removing '{1}'.".format(item_type, item))
             return None
@@ -101,123 +136,45 @@ class Badger(object):
         self.log("debug", msg="Loaded config for {0} '{1}'".format(item_type, item))
         self.log("debug", msg="Successfully loaded {0} '{1}'.".format(item_type, item))
 
-        return str(loaded_item)
-            
 
-    def load_modules_and_emitters(self):
-        found = {
-            "emitters" : [],
-            "modules"  : []
-        }
-        loaded = {
-            "emitters" : [],
-            "modules"  : [],
-            "configs"  : {}
-        }
+        item_name = str(loaded_item).split("'")[1]
 
-        for item in ['modules', 'emitters']:
-            dir = self.config[item]['dir']
-            config = self.config[item]['config']
-            if not os.path.isdir(dir):
-                self.log("crit", msg="Could not find {0} directory '{1}'".format(item, dir), exiting=True)
-                exit(1)
+        try:
+            initialized_item = getattr(loaded_item, item_name)(item_config, self.log)
+        except:
+            ei = sys.exc_info()
+            self.log("err", msg="Could not initialize {0} '{1}'".format(item_type, item_name), exceptionType="{0}".format(str(ei[0])), exception="{0}".format(str(ei[1])))
+        else:
+            method_check_pass = True
+            for method in required_methods[item_type]:
+                if not hasattr(initialized_item, method):
+                    self.log("err", msg="Required method '{0}' does not exist in {1} '{2}'. Unloading {1}.".format(method, item_type, str(item_name)), event="ModuleUnload")
+                    method_check_pass = False
+                    break
 
-            if not os.path.isdir(config):
-                self.log("crit", msg="Could not find {0} config directory '{1}'".format(item, config), exiting=True)
-                exit(1)
+                if method_check_pass:
+                    self.log("debug", msg="Successfully initialized {0} '{1}'".format(item_type, item_name))
 
-            sys.path.append(dir)
-
-            # Check to see if the modules and emitters desired are actually present in the right place
-            for sub_item in self.config[item]['included_' + item]:
-                if not os.path.isfile(os.path.join(dir, sub_item + ".py")):
-                    self.log("err", msg="Could not find {0} '{1}' in dir '{2}', skipping.".format(item, sub_item, dir))
-                else:
-                    self.log("debug", msg="{0} '{1}' exists".format(item, sub_item))
-                    found[item].append(sub_item)
-
-            self.log("info", msg="Found {0} : {1}".format(item, found[item]))
-
-            # Try to dynamically import all requested (and found) modules. We loop
-            #  through these instead of using map(__import__, found_modules) in
-            #  order to avoid failing some portion of the op on account of a single
-            #  failed import. This also lets me tell you which module failed and why
-            #  in a cleaner way
-            for sub_item in found[item]:
-               try:
-                    loaded[item].append(__import__(sub_item, [sub_item]))
-               except:
-                    ei = sys.exc_info()
-                    self.log("err", msg="Could not load {0} '{1}' at {2}".format(item, sub_item, os.path.join(dir, sub_item + '.py')), exceptionType="{0}".format(str(ei[0]).split("'")[1]), exception="{0}".format(ei[1]))
-                    del ei
-               else:
-                    sub_item_config_file = os.path.join(config, sub_item + ".conf")
-                   
-                    try:
-                        sub_item_config = BadgerConfig(sub_item_config_file).get_config_dict()
-                    except:
-                        loaded[item].pop()
-                        self.log("err", msg="Could not load config for {0} '{1}'. Removing '{1}'.".format(item, sub_item))
-                    else:
-                        loaded['configs'][sub_item] = sub_item_config
-                        self.log("debug", msg="Loaded config for {0} '{1}'".format(item, sub_item))
-                        self.log("debug", msg="Successfully loaded {0} '{1}'.".format(item, sub_item))
-
-            # Critical exit if no modules were loaded - no sense in spinning doing nothing
-            if not len(loaded[item]):
-                self.log("crit", msg="No {0} were loaded!".format(item), event="ErrExit")
-                exit(1)
-
-            self.log("info", msg="Loaded {0} : {1}".format(item, [str(si).split("'")[1] for si in loaded[item]]))
-
-        return (loaded)
+        return initialized_item
 
 
-    def initialize_modules_and_emitters(self):
-        initialized = {
-            'modules'  : [],
-            'emitters' : []
-        }
+    def collect_async_stats(self, module):
+        while True:    
+            payload = module.get_stats(self.global_iteration)
 
-        required_methods = {
-            'modules' : [ "get_stats" ],
-            'emitters' : [ "emit_stats" ],
-        }
+            if payload:
+                for stat in payload:
+                    self.async_stats_queue.put(stat)
 
-        for item in ['modules', 'emitters']:
-            for sub_item in self.loaded_modules_and_emitters[item]:
-                sub_item_name = str(sub_item).split("'")[1]
-                sub_item_config = self.loaded_modules_and_emitters['configs'][sub_item_name]
+            time.sleep(1)
 
-                try:
-                    initialized_item = getattr(sub_item, sub_item_name)(sub_item_config, self.log)
-                except:
-                    ei = sys.exc_info()
-                    self.log("err", msg="Could not initialize {0} '{1}'".format(item, sub_item_name), exceptionType="{0}".format(str(ei[0])), exception="{0}".format(str(ei[1])))
-                else:
-                    method_check_pass = True
-                    for method in required_methods[item]:
-                        if not hasattr(initialized_item, method):
-                            self.log("err", msg="Required method '{0}' does not exist in {1} '{2}'. Unloading {1}.".format(method, item, str(sub_item).split("'")[1]), event="ModuleUnload")
-                            method_check_pass = False
-                            break
-
-                        if method_check_pass:
-                            initialized[item].append(initialized_item)
-                            self.log("debug", msg="Successfully initialized {0} '{1}'".format(item, sub_item_name))
-
-            if not len(initialized[item]):
-                self.log("crit", msg="No {0} could be initialized!".format(item), event="ErrExit")
-                exit(1)
-            
-            self.log("info", msg="Initialized {0}".format(item), initializedItems=[str(ie).split(".")[0].split("<")[1] for ie in initialized[item]])
-
-        return initialized
 
     def collect_stats(self):
         # make sure we don't end up adding to the sysinfo dict and passing around
         #  a full payload on every run
         payload = copy.deepcopy(self.sysinfo)
+
+        retrieved_from_queue = 0
 
         payload['timestamp'] = time.time()
         payload['points'] = []
@@ -237,6 +194,15 @@ class Badger(object):
                     self.log("debug", msg="Elapsed time for module {0} gather: {1}".format(module, elapsed_time))
                     for measurement in stats_raw:
                         payload['points'].append(measurement)
+
+        if self.async_stats_queue.qsize():
+            while retrieved_from_queue < self.queue_batch_size:
+                try:
+                    payload['points'].append(self.async_stats_queue.get_nowait())
+                except:
+                    break
+                else:
+                    self.async_stats_queue.task_done()
 
         if not payload['points']:
             self.log("debug", msg="No stats gathered for global_iteration {0}".format(self.global_iteration))
@@ -258,32 +224,37 @@ class Badger(object):
 
 
     def dig(self):
-        self.log("debug", msg=self.loaded_modules)
-        self.log("debug", msg=self.loaded_async_modules)
-        self.log("debug", msg=self.loaded_emitters)
-#        while True:
-#            self.log("debug", msg="Active threads: {0}".format(threading.activeCount()))
-#            startCollect = dt.now()
-#            payload = self.collect_stats()
-#            endCollect = dt.now()
-#
-#            self.log("debug", msg="Emitting stats")
-#
-#            startEmit = dt.now()
-#            self.emit_stats(payload)
-#            endEmit = dt.now()
-#
-#            self.log("debug", msg="Elapsed time for collection: {0}".format((endCollect - startCollect).total_seconds()))
-#            self.log("debug", msg="Elapsed time for emission: {0}".format((endEmit - startEmit).total_seconds()))
-#
-#            # need to be sure we roll over this counter appropriately, otherwise we're
-#            #  guaranteed a crash every 292471208677.53-ish years. that would suck.
-#            if self.global_iteration == sys.maxint:
-#                self.global_iteration = 0
-#            else:
-#                self.global_iteration += 1
-#
-#            time.sleep(1)
+        for worker in self.async_workers:
+            worker.start()
+
+        while True:
+            start_dig = dt.now()
+            self.log("debug", msg="Active threads: {0}".format(threading.activeCount()))
+            start_collect = dt.now()
+            payload = self.collect_stats()
+            end_collect = dt.now()
+
+            self.log("debug", msg="Emitting stats")
+
+            start_emit = dt.now()
+            self.emit_stats(payload)
+            end_emit = dt.now()
+
+            self.log("debug", msg="Elapsed time for collection: {0}".format((end_collect - start_collect).total_seconds()))
+            self.log("debug", msg="Elapsed time for emission: {0}".format((end_emit - start_emit).total_seconds()))
+
+            # need to be sure we roll over this counter appropriately, otherwise we're
+            #  guaranteed a crash every 292471208677.53-ish years. that would suck.
+            if self.global_iteration == sys.maxint:
+                self.global_iteration = 0
+            else:
+                self.global_iteration += 1
+
+            elapsed_dig_time = (dt.now() - start_dig).total_seconds()
+            adjusted_sleep_time = float(1 - elapsed_dig_time)
+            self.log("debug", msg="Elapsed dig time: {0} -- Sleeping for {1} seconds".format(elapsed_dig_time, adjusted_sleep_time))
+
+            time.sleep(adjusted_sleep_time)
 
 if __name__ == "__main__":
     try:
@@ -292,7 +263,7 @@ if __name__ == "__main__":
         import traceback
         ei = sys.exc_info()
         traceback.print_exception(ei[0], ei[1], ei[2], None, sys.stderr)
-        print "Could not Badger Core! Exiting."
+        print "Could not initialize Badger Core! Exiting."
         exit(1)
 
     badger.dig()

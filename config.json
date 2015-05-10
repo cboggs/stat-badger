@@ -21,8 +21,13 @@
         {
             "dir": "badger_modules",
             "config": "badger_modules/conf.d",
-            "serial_modules": ["system", "cpu", "disk", "network", "memory", "process_stats"],
-            "async_modules": ["load"]
+            "included_modules": ["system", "cpu", "disk", "network", "memory", "process_stats"]
+        },
+    "async_modules":
+        {
+            "dir": "badger_modules",
+            "config": "badger_modules/conf.d",
+            "included_modules": ["load"]
         },
     "emitters":
         {

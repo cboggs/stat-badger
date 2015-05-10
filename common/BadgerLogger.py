@@ -31,9 +31,7 @@ class BadgerLogger(object):
             print "You specified log dest == 'file' but did not provide a logFileName! Exiting."
             exit(1)
         else:
-            log = logging.getLogger('')
-            log.setLevel(logging.DEBUG)
-            #logging.basicConfig(level=self.logLevel, format='%(message)s')
+            logging.basicConfig(level=self.logLevel, format='%(message)s')
 
     def logJSON(self, logLevel="unknown", **kwargs):
         if logLevel == "unknown":
