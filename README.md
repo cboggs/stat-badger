@@ -92,8 +92,5 @@ There are a number of things I'd like to get added / refactored in the near futu
  * Docker - initially grab per-container stats by running on Docker hosts
  * Docker container stats - if possible, restrict stats gathered within a container to that particular container's relevant stats (currently, stats like cpu and memory that are collected within a container reflect system-wide Docker host stats)
 
-* Async Stats Collection
- * Currently all modules are called upon to collect stats in a serial fashion, every second. This is fine for most stats, as the total collection time usually comes in at a handful of milliseconds. However, it would be nice to be able to query local API endpoints for service-specific stats without worrying about a handful of slow-ish responses throwing off the entire polling interval at unpredictable rates. Implementing async collection will be a pretty major refactor, so this will likely take a while.
-
 * Tests
  * I'm not a developer by trade, so I slacked and wrote code without tests. I originally started this as a fun experiment to help me wrap my head around some extra Python goodness, and it worked better than I expected. Ultimately it seemed like it might be useful to others since nothing else like it exists, so here we are. Now I need to be un-lazy and make this stuff testable (which will probably take a significant rewrite of some portions).
