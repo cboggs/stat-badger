@@ -1,4 +1,4 @@
-## v0.1.4
+## v0.1.4 [2015-05-09]
 
 ### Features
 - [#1] (https://github.com/cboggs/stat-badger/issues/1): Support for async stats collection
