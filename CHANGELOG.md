@@ -1,3 +1,11 @@
+## v0.1.5 [Unreleased]
+### Features
+-
+
+### Bugfixes
+- [#4] (https://github.com/cboggs/stat-badger/issues/4): load_item method throws exception and kills stat badger when any module or emitter fails to initialize
+
+
 ## v0.1.4 [2015-05-09]
 
 ### Features
