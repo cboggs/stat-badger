@@ -144,6 +144,7 @@ class Badger(object):
         except:
             ei = sys.exc_info()
             self.log("err", msg="Could not initialize {0} '{1}'".format(item_type, item_name), exceptionType="{0}".format(str(ei[0])), exception="{0}".format(str(ei[1])))
+            return None
         else:
             method_check_pass = True
             for method in required_methods[item_type]:
