@@ -1,6 +1,6 @@
-## v0.1.5 [Unreleased]
+## v0.1.5 [2015-05-19]
 ### Features
--
+- [#10] (https://github.com/cboggs/stat-badger/pull/10): add thread counts to per-process stats in process_stats module
 
 ### Bugfixes
 - [#4] (https://github.com/cboggs/stat-badger/issues/4): load_item method throws exception and kills stat badger when any module or emitter fails to initialize
