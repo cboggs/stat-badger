@@ -64,6 +64,8 @@ class process_stats(object):
         for stat in self.proc_mem():
             payload.append(stat)
 
+        for stat in self.proc_threads():
+            payload.append(stat)
 
         return payload
 
@@ -122,6 +124,18 @@ class process_stats(object):
             return None
 
         return jiffies
+
+    def proc_threads(self):
+        vals = {}
+
+        for proc, pid in self.found_pids.iteritems():
+
+            try:
+                vals[proc] = int(open(os.path.join('/proc', str(pid), 'status')).readlines()[23].split()[1])
+            except IOError: # proc has already terminated
+                continue
+
+        return [{self.prefix + "thread_count." + key: {'value': value, 'units': ''}} for key, value in vals.iteritems()]
 
     def proc_mem(self):
         vals = {}
@@ -224,12 +238,13 @@ if __name__ == "__main__":
         "interval": 0,
         "blacklist": [],
         "processes": [
-            { "name": "stat-badger", "pattern": ".+badger_core\\.py -f.+" },
+            { "name": "stat-badger", "pattern": ".+badger_core\\.py -f.+" }
         ]
     }
     p = process_stats(config=cfg)
     i = 0
     while True:
-        print p.get_stats(i)
+        for stat in p.get_stats(i):
+            print stat
         i += 1
         time.sleep(1)
