@@ -255,7 +255,10 @@ class Badger(object):
             adjusted_sleep_time = float(1 - elapsed_dig_time)
             self.log("debug", msg="Elapsed dig time: {0} -- Sleeping for {1} seconds".format(elapsed_dig_time, adjusted_sleep_time))
 
-            time.sleep(adjusted_sleep_time)
+            if adjusted_sleep_time > 0.0:
+                time.sleep(adjusted_sleep_time)
+            else:
+                self.log("warn", msg="Adjusted sleep time {0}s <= 0.0s! Skipping sleep. Investigate system slowdown to determine why badger_core main loop is taking >= 1.0s to execute.".format(adjusted_sleep_time))
 
 if __name__ == "__main__":
     try:
