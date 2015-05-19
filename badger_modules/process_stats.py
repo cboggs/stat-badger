@@ -64,6 +64,7 @@ class process_stats(object):
         for stat in self.proc_mem():
             payload.append(stat)
 
+
         return payload
 
 
@@ -86,13 +87,30 @@ class process_stats(object):
                     continue
 
     def get_ctxt_info_for_pid(self, pid):
-        try:
-            ctxt_info = [l.rstrip().split() for l in open("/proc/{0}/status".format(pid)).readlines()[39:41]]
-        except IOError: #proc has already terminated
+        if pid == 0:
             return None
 
-        return [ctxt_info[0][1], ctxt_info[1][1]]
-        
+        try:
+            threads = [t for t in os.listdir(os.path.join('/proc', str(pid), 'task')) if t.isdigit()]
+        except OSError: # proc has already terminated
+            return None
+
+        total_voluntary_switches = 0
+        total_nonvoluntary_switches = 0
+
+        for thread in threads:
+            try:
+                ctxt_info = [l.rstrip().split() for l in open("/proc/{0}/task/{1}/status".format(pid, thread)).readlines()[39:41]]
+            except IOError: # thread has already terminated
+                continue
+            except OSError: # process terminated mid-gather
+                break
+
+            total_voluntary_switches += int(ctxt_info[0][1])
+            total_nonvoluntary_switches += int(ctxt_info[1][1])
+
+        return [total_voluntary_switches, total_nonvoluntary_switches]
+
 
     def get_total_system_jiffies(self):
         return sum(int(j) for j in open("/proc/stat").readlines()[0].split()[1:])
@@ -162,9 +180,9 @@ class process_stats(object):
 
 
     def proc_cpu(self):
-#        # First run of this module will hit this block and return all zeroes, after populating
-#        #  self.last_cpu_vals. This approach avoids inflated values for should-be-zero states
-#        #  at first collection
+        # First run of this module will hit this block and return all zeroes, after populating
+        #  self.last_cpu_vals. This approach avoids inflated values for should-be-zero states
+        #  at first collection
         if not self.last_cpu_vals:
             self.last_total_jiffies = self.get_total_system_jiffies()
             for proc, pid in self.found_pids.iteritems():
@@ -193,7 +211,7 @@ class process_stats(object):
                 self.last_cpu_vals[proc] = 0
                 util[proc] =  { 'value': 0.0, 'units': 'percent'}
 
-#        # Get ready for the next run
+        # Get ready for the next run
         self.last_cpu_vals = copy.deepcopy(vals)
         self.last_total_jiffies = current_total_jiffies
 
@@ -206,7 +224,7 @@ if __name__ == "__main__":
         "interval": 0,
         "blacklist": [],
         "processes": [
-#            { "name": "stat-badger", "pattern": ".+badger_core\.py -f.+" }
+            { "name": "stat-badger", "pattern": ".+badger_core\\.py -f.+" },
         ]
     }
     p = process_stats(config=cfg)
