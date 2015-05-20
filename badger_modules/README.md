@@ -1,6 +1,8 @@
-**WARNING:** Your modules need to be *fast*. Like "returns in a handful of milliseconds" fast. Badger Core is wired for a 1-second polling interval, and exceeding that boundary will cause erratic granularities in your back-ends. This will be smoothed a bit in a future release, but either way you should strive to chew up as little of that 1000 milliseconds as you possibly can.
+**WARNING:** If your modules cannot run quickly (as in, "a handful of milliseconds" quickly), then you should include them in your config as *async* modules, not "normal" modules. Badger Core is wired for a 1-second polling interval, and exceeding that boundary due to slow synchronous modules will cause erratic granularities in your back-ends. This is smoothed a bit by adjusting the sleep interval to account for elapsed collection/emission time, but either way you should strive to chew up as little of that 1000 milliseconds as you possibly can.
 
 Generally, each module should be responsible for a single component of the system. For example, Stat Badger ships with a cpu module, network module, etc. Useful additions would be an apache2 module, a MongoDB module, etc.
+
+All modules that meet the requirements below can be used as *either* syncrhonous or asynchronous modules. The deciding factor regarding how you load any given module is simply the potential worst-case scenario for execution time of the module's get_stats() method. As a rule of thumb: modules that read from /proc are crazy fast and are good candidates for synchronous modules, while modules that query APIs or have to deal with any other delay-prone data source should be loaded as asynchronous modules so as to avoid impacting the global polling interval adversely.
 
 Modules are required to consist of the following:
     * a python file in your module directory: `yourmod.py`
